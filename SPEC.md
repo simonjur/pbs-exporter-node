@@ -40,7 +40,7 @@ MUST preserve metric names, labels, and help strings.
 |----|-------------|--------|
 | REQ-RT-1 | Runs on Node.js >= 24 directly from TypeScript (native type stripping); no separate build step required to run. | `node src/main.ts --version` prints a version line and exits 0. **[offline-ok]** |
 | REQ-RT-2 | Type-checks cleanly. | `npm run lint:ts` exits 0. **[offline-ok]** |
-| REQ-RT-3 | Runtime dependencies are limited to `prom-client`, `undici`, and `commander`. | Inspect `package.json` `dependencies`. **[offline-ok]** |
+| REQ-RT-3 | Runtime dependencies are limited to `prom-client`, `undici`, `commander`, and `parse-duration`. | Inspect `package.json` `dependencies`. **[offline-ok]** |
 | REQ-RT-4 | Config-loading logic lives in [`src/config.ts`](src/config.ts) (separate from `main.ts`) and is covered by vitest unit tests run via `npm run tests:unit`. | `npm run tests:unit` exits 0 with all tests passing. **[offline-ok]** |
 | REQ-RT-5 | `npm run tests:unit:coverage` generates coverage reports under `coverage/`: HTML (`index.html`), Cobertura XML (`cobertura-coverage.xml`, for GitHub) and LCOV (`lcov.info`, for SonarQube via `sonar.javascript.lcov.reportPaths`). | Run it; assert the three artifacts exist. **[offline-ok]** |
 

@@ -17,7 +17,8 @@ TypeScript via Node's native type stripping — there is no required build step 
   [`undici`](https://github.com/nodejs/undici) (HTTP/TLS dispatcher for `fetch`),
   [`commander`](https://github.com/tj/commander.js) (flag parsing),
   [`parse-duration`](https://github.com/jkroso/parse-duration) (timeout duration parsing).
-- Dev deps: `typescript`, `@types/node`, `vitest`, `@vitest/coverage-v8`.
+- Dev deps: `typescript`, `@types/node`, `vitest`, `@vitest/coverage-v8`,
+  `eslint` (v10, flat config), `@eslint/js`, `typescript-eslint`, `prettier`.
 
 ### Layout
 
@@ -32,6 +33,9 @@ npm install                  # install dependencies
 npm start                    # run the exporter (node --env-file=.env src/main.ts)
 npm run dev                  # run with --watch for local development
 npm run lint:ts              # type-check only (tsc --noEmit) — must exit 0
+npm run lint:eslint          # lint all .ts files with ESLint 10 — must exit 0
+npm run lint:prettier        # check formatting of all .ts files — must exit 0
+npm run format               # auto-fix formatting with Prettier (--write)
 npm run tests:unit           # run vitest unit tests
 npm run tests:unit:coverage  # run tests + write coverage/ reports (html, cobertura xml, lcov)
 npm run build                # emit JS to dist/ (tsc)
@@ -50,7 +54,10 @@ Coverage reports land in `coverage/`:
   these and rewrites them to `.js` on `npm run build`.
 - Avoid constructs the type stripper can't handle (TS `enum`, `namespace`, parameter
   properties). Use plain types/interfaces and union literals.
-- After any change, both `npm run lint:ts` and `npm run tests:unit` must pass.
+- After any change, `npm run lint:ts`, `npm run lint:eslint`, `npm run lint:prettier`,
+  and `npm run tests:unit` must all pass. ESLint uses a flat config
+  ([eslint.config.mjs](eslint.config.mjs), v10) with `typescript-eslint`; Prettier
+  formatting is enforced in CI — run `npm run format` to fix style locally.
 
 ## Configuration
 
