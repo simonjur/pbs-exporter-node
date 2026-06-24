@@ -10,9 +10,13 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { createRequire } from "node:module";
 import { Agent } from "undici";
 import { Registry, Gauge, collectDefaultMetrics } from "prom-client";
 import { type Config, loadConfig, parseDuration, parseBool } from "./config.ts";
+import { getStatuses, getSummary, recordScrape, seedTarget } from "./status.ts";
 
 const PROM_NAMESPACE = "pbs";
 const VERSION_API = "/api2/json/version";
@@ -24,6 +28,37 @@ const NODE_API = "/api2/json/nodes";
 const Version = process.env.PBS_BUILD_VERSION ?? "v0.0.0-dev.0";
 const Commit = process.env.PBS_BUILD_COMMIT ?? "none";
 const BuildTime = process.env.PBS_BUILD_TIME ?? "unknown";
+
+// ---------------------------------------------------------------------------
+// Static assets for the status UI (served on `/`).
+// Vue and Vuetify browser builds are vendored from node_modules at runtime —
+// no CDN, so the page works in air-gapped environments. Bodies are cached in
+// memory after first read.
+// ---------------------------------------------------------------------------
+
+const requireFromHere = createRequire(import.meta.url);
+const webDir = join(import.meta.dirname, "web");
+const vueDir = dirname(requireFromHere.resolve("vue/package.json"));
+const vuetifyDir = dirname(requireFromHere.resolve("vuetify/package.json"));
+
+const JS_TYPE = "text/javascript; charset=utf-8";
+const staticAssets: Record<string, { file: string; type: string }> = {
+  "/": { file: join(webDir, "index.html"), type: "text/html; charset=utf-8" },
+  "/assets/app.js": { file: join(webDir, "app.js"), type: JS_TYPE },
+  "/assets/vue.global.prod.js": {
+    file: join(vueDir, "dist", "vue.global.prod.js"),
+    type: JS_TYPE,
+  },
+  "/assets/vuetify.min.js": {
+    file: join(vuetifyDir, "dist", "vuetify.min.js"),
+    type: JS_TYPE,
+  },
+  "/assets/vuetify.min.css": {
+    file: join(vuetifyDir, "dist", "vuetify.min.css"),
+    type: "text/css; charset=utf-8",
+  },
+};
+const assetCache = new Map<string, Buffer>();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -193,9 +228,22 @@ type Metrics = ReturnType<typeof buildMetrics>;
 // Exporter
 // ---------------------------------------------------------------------------
 
+type ScrapeResult = {
+  up: boolean;
+  version: string | null;
+  release: string | null;
+  error: string | null;
+};
+
 class Exporter {
   private readonly endpoint: string;
   private readonly authorizationHeader: string;
+  // Captured during a scrape so the status UI can report the PBS version.
+  private versionInfo: {
+    version: string;
+    release: string;
+    repoid: string;
+  } | null = null;
 
   constructor(
     endpoint: string,
@@ -227,13 +275,26 @@ class Exporter {
     return { status: resp.status, body, json: () => JSON.parse(body) as T };
   }
 
-  async collect(m: Metrics): Promise<void> {
+  async collect(m: Metrics): Promise<ScrapeResult> {
     try {
       await this.collectFromAPI(m);
       m.up.set(1);
+      return {
+        up: true,
+        version: this.versionInfo?.version ?? null,
+        release: this.versionInfo?.release ?? null,
+        error: null,
+      };
     } catch (err) {
       m.up.set(0);
-      log.error(err instanceof Error ? err.message : String(err));
+      const message = err instanceof Error ? err.message : String(err);
+      log.error(message);
+      return {
+        up: false,
+        version: this.versionInfo?.version ?? null,
+        release: this.versionInfo?.release ?? null,
+        error: message,
+      };
     }
   }
 
@@ -263,6 +324,11 @@ class Exporter {
       );
     }
     const d = resp.json().data;
+    this.versionInfo = {
+      version: d.version,
+      release: d.release,
+      repoid: d.repoid,
+    };
     m.version.set(
       { version: d.version, repoid: d.repoid, release: d.release },
       1,
@@ -501,6 +567,8 @@ function main(): void {
 
   if (config.endpoint !== "") {
     log.info(`Using fix connection endpoint: ${sanitize(config.endpoint)}`);
+    // Show the fixed endpoint on the status page before its first scrape.
+    seedTarget(config.endpoint);
   }
   log.info(`Listening on: ${config.listenAddress}`);
   log.info(`Metrics path: ${config.metricsPath}`);
@@ -555,7 +623,15 @@ async function handleRequest(
       config.apitoken,
       config.apitokenname,
     );
-    await exporter.collect(metrics);
+    const result = await exporter.collect(metrics);
+    recordScrape({
+      target,
+      up: result.up,
+      version: result.version,
+      release: result.release,
+      error: result.error,
+      nowMs: Date.now(),
+    });
 
     // Combine PBS scrape metrics with the persistent Node.js process metrics.
     const merged = Registry.merge([defaultRegistry, registry]);
