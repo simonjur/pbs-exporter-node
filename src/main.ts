@@ -640,20 +640,52 @@ async function handleRequest(
     return;
   }
 
-  if (url.pathname === "/") {
-    res.setHeader("Content-Type", "text/html");
-    res.end(`<html>
-			<head><title>PBS Exporter</title></head>
-			<body>
-			<h1>Proxmox Backup Server Exporter</h1>
-			<p><a href='${config.metricsPath}'>Metrics</a></p>
-			</body>
-			</html>`);
+  // JSON feed powering the status UI.
+  if (url.pathname === "/api/status") {
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.end(
+      JSON.stringify({
+        exporter: { version: Version, commit: Commit, buildTime: BuildTime },
+        summary: getSummary(),
+        targets: getStatuses(),
+      }),
+    );
+    return;
+  }
+
+  // Status UI page and its vendored assets.
+  if (await serveStaticAsset(url.pathname, res)) {
     return;
   }
 
   res.statusCode = 404;
   res.end("404 page not found");
+}
+
+/** Serve a known static asset (cached in memory). Returns false if no match. */
+async function serveStaticAsset(
+  pathname: string,
+  res: ServerResponse,
+): Promise<boolean> {
+  const asset = staticAssets[pathname];
+  if (!asset) return false;
+
+  try {
+    let body = assetCache.get(pathname);
+    if (!body) {
+      body = await readFile(asset.file);
+      assetCache.set(pathname, body);
+    }
+    res.setHeader("Content-Type", asset.type);
+    res.end(body);
+  } catch (err) {
+    log.error(
+      `Failed to serve asset ${sanitize(pathname)}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    res.statusCode = 500;
+    res.end("500 internal server error");
+  }
+  return true;
 }
 
 main();
