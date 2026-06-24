@@ -1,6 +1,6 @@
 services:
   pbs-exporter:
-    image: ghcr.io/natrontech/pbs-exporter:latest
+    image: ghcr.io/simonjur/pbs-exporter-node:alpha
     container_name: pbs-exporter
     user: '65534'
     restart: always

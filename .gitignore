@@ -18,3 +18,7 @@ pbs-exporter
 .env
 bin
 .secrets/
+.env
+
+# test coverage reports
+coverage/

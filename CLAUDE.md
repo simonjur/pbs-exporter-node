@@ -1,152 +1,74 @@
 # CLAUDE.md
 
-## Updating Go version and dependencies
+## Specification (source of truth)
 
-When updating to a new Go version or upgrading dependencies, touch all of the following locations:
+[SPEC.md](SPEC.md) is the spec-driven-development source of truth for what the
+exporter must do. Each requirement has a stable `REQ-*` ID and a verification method.
+When behavior changes, update SPEC.md **first**, then the code, then re-verify against
+it. To check the app does what it's supposed to, work through SPEC.md's "How to verify"
+section and report PASS/FAIL/SKIP per requirement ID.
 
-### 1. Update Go modules
+## Stack
 
-```bash
-# Update all dependencies to latest versions
-make go-update   # runs: go get -u ./... && go mod tidy -compat=<major.minor>
-```
+This project is a **Node.js (>= 24) / TypeScript** application. It is run directly from
+TypeScript via Node's native type stripping — there is no required build step to run it.
 
-Or manually:
+- Runtime deps: [`prom-client`](https://github.com/siimon/prom-client) (metrics),
+  [`undici`](https://github.com/nodejs/undici) (HTTP/TLS dispatcher for `fetch`),
+  [`commander`](https://github.com/tj/commander.js) (flag parsing),
+  [`parse-duration`](https://github.com/jkroso/parse-duration) (timeout duration parsing).
+- Dev deps: `typescript`, `@types/node`, `vitest`, `@vitest/coverage-v8`.
 
-```bash
-go get -u ./...
-go mod tidy
-```
+### Layout
 
-### 2. Update the Go version directive in go.mod
+- [src/main.ts](src/main.ts) — entrypoint: HTTP server, PBS API client, metric collection.
+- [src/config.ts](src/config.ts) — config loading (flags + env), pure and unit-tested.
+- [src/config.test.ts](src/config.test.ts) — vitest unit tests for the config module.
 
-Edit [go.mod](go.mod) and bump the `go` directive:
-
-```
-go 1.26.2
-```
-
-### 3. Update hardcoded GOTOOLCHAIN in workflows
-
-Two workflows hardcode the toolchain version and must be updated manually:
-
-- [.github/workflows/codeql.yml](.github/workflows/codeql.yml) — `GOTOOLCHAIN: "go1.26.2"`
-- [.github/workflows/gosec.yml](.github/workflows/gosec.yml) — `GOTOOLCHAIN: "go1.26.2"`
-
-The following workflows use `go-version-file: 'go.mod'` and pick up the version automatically — no changes needed:
-
-- [.github/workflows/golangci-lint.yml](.github/workflows/golangci-lint.yml)
-- [.github/workflows/release.yml](.github/workflows/release.yml)
-
-### 4. Update `-compat` flag in Makefile (major/minor version bumps only)
-
-[Makefile](Makefile) line 15 has a hardcoded `-compat` flag:
-
-```makefile
-go mod tidy -compat=1.26
-```
-
-Update this when the `major.minor` version changes (not needed for patch-only bumps).
-
-### 5. Update ko version
-
-[Makefile](Makefile) hardcodes the ko version:
-
-```makefile
-KO_VERSION  = v0.18.1
-```
-
-Check the latest release and update the version:
+## Commands
 
 ```bash
-gh release view --repo google/ko --json tagName -q '.tagName'
+npm install                  # install dependencies
+npm start                    # run the exporter (node --env-file=.env src/main.ts)
+npm run dev                  # run with --watch for local development
+npm run lint:ts              # type-check only (tsc --noEmit) — must exit 0
+npm run tests:unit           # run vitest unit tests
+npm run tests:unit:coverage  # run tests + write coverage/ reports (html, cobertura xml, lcov)
+npm run build                # emit JS to dist/ (tsc)
 ```
 
-Then update `KO_VERSION` in [Makefile](Makefile) accordingly.
+Coverage reports land in `coverage/`:
+- `index.html` — human-browsable report
+- `cobertura-coverage.xml` — generic XML for GitHub coverage actions
+- `lcov.info` — for SonarQube (`sonar.javascript.lcov.reportPaths=coverage/lcov.info`)
 
-### 6. Update GitHub Actions versions
+## TypeScript conventions
 
-All workflow files under [.github/workflows/](.github/workflows/) pin actions by commit SHA with a tag comment, e.g.:
+- **Relative imports use the `.ts` extension** (e.g. `import { loadConfig } from "./config.ts"`).
+  This is required by Node's native TypeScript execution. `tsconfig.json` enables
+  `allowImportingTsExtensions` + `rewriteRelativeImportExtensions`, so `tsc` type-checks
+  these and rewrites them to `.js` on `npm run build`.
+- Avoid constructs the type stripper can't handle (TS `enum`, `namespace`, parameter
+  properties). Use plain types/interfaces and union literals.
+- After any change, both `npm run lint:ts` and `npm run tests:unit` must pass.
 
-```yaml
-uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-```
+## Configuration
 
-To update, get the latest tag and its commit SHA for each action:
+Flags (commander) and environment variables; precedence is default → flag → env.
+See `loadConfig` in [src/config.ts](src/config.ts) and the `REQ-CFG-*` requirements in
+[SPEC.md](SPEC.md) for the authoritative list. Secret values can be supplied via
+`*_FILE` env vars (first line of the file is read).
 
-```bash
-# Get latest tag
-gh release view --repo <owner>/<repo> --json tagName -q '.tagName'
+## Security — log injection
 
-# Get commit SHA for that tag
-gh api repos/<owner>/<repo>/commits/<tag> --jq '.sha'
-```
+Any user-controlled value (e.g. the resolved `target` endpoint) must be stripped of
+CR/LF before being logged, to prevent log-injection. Use the `sanitize()` helper in
+[src/main.ts](src/main.ts) (it `replaceAll`s `\n` and `\r`) for anything originating
+from request input or external responses.
 
-Then update the SHA and the tag comment in the workflow file.
+## Legacy Go code (pending removal)
 
-**Exception — `slsa-framework/slsa-github-generator`** must be referenced by tag, not SHA (see [upstream docs](https://github.com/slsa-framework/slsa-github-generator/?tab=readme-ov-file#referencing-slsa-builders-and-generators)):
-
-```yaml
-uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
-```
-
-Actions used across the workflows:
-
-| Action | Workflow(s) |
-|---|---|
-| `actions/checkout` | all |
-| `actions/dependency-review-action` | dependency-review.yml |
-| `actions/setup-go` | release.yml, golangci-lint.yml |
-| `actions/upload-artifact` | scorecard.yml |
-| `anchore/sbom-action` | release.yml |
-| `creekorful/goreportcard-action` | release.yml |
-| `docker/login-action` | release.yml |
-| `github/codeql-action` | codeql.yml, scorecard.yml |
-| `golangci/golangci-lint-action` | golangci-lint.yml — also update `version:` param to match `rev` in [.pre-commit-config.yaml](.pre-commit-config.yaml) |
-| `google/osv-scanner-action` | osv-scan.yml |
-| `goreleaser/goreleaser-action` | release.yml |
-| `ossf/scorecard-action` | scorecard.yml |
-| `securego/gosec` | gosec.yml — also update `additional_dependencies` version in [.pre-commit-config.yaml](.pre-commit-config.yaml) |
-| `sigstore/cosign-installer` | release.yml, release-verification.yml |
-| `slsa-framework/slsa-github-generator` | release.yml (**tag only**) |
-| `slsa-framework/slsa-verifier` | release-verification.yml |
-
-### 7. Update pre-commit hooks
-
-[.pre-commit-config.yaml](.pre-commit-config.yaml) pins the `rev` of each hook repository. Update all revisions to their latest tags:
-
-```bash
-prek auto-update
-```
-
-This updates the `rev` fields for all four repos in [.pre-commit-config.yaml](.pre-commit-config.yaml):
-- `pre-commit/pre-commit-hooks`
-- `gitleaks/gitleaks`
-- `dnephin/pre-commit-golang`
-- `golangci/golangci-lint`
-
-### 8. Verify
-
-```bash
-go build ./...
-go test ./...
-```
-
----
-
-## Security scanning (gosec)
-
-The CI runs [`securego/gosec`](https://github.com/securego/gosec) via [`.github/workflows/gosec.yml`](.github/workflows/gosec.yml). The same check runs locally via the `local` pre-commit hook in [`.pre-commit-config.yaml`](.pre-commit-config.yaml) (uses `language: golang` to install gosec automatically).
-
-Run manually:
-
-```bash
-go install github.com/securego/gosec/v2/cmd/gosec@latest
-gosec ./...
-```
-
-**Log injection (G706):** Any user-controlled value passed to `log.Printf` must be sanitised before use. Use `strings.ReplaceAll` (gosec-recognised sanitizer) to strip newlines — `strings.NewReplacer(...).Replace(...)` looks equivalent but is **not** on gosec's sanitizer list and will still trigger G706:
-
-```go
-log.Printf("... %s", strings.ReplaceAll(strings.ReplaceAll(userInput, "\n", ""), "\r", ""))
-```
+The repository still contains the original Go implementation and its tooling — `main.go`,
+`go.mod`/`go.sum`, the `Makefile`, and the Go-oriented GitHub workflows / pre-commit hooks.
+These are **superseded by the TypeScript app** and kept only until a later cleanup. Do not
+treat them as the current source of truth; the Node/TypeScript code above is authoritative.
