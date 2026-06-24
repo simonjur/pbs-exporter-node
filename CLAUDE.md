@@ -16,15 +16,21 @@ TypeScript via Node's native type stripping — there is no required build step 
 - Runtime deps: [`prom-client`](https://github.com/siimon/prom-client) (metrics),
   [`undici`](https://github.com/nodejs/undici) (HTTP/TLS dispatcher for `fetch`),
   [`commander`](https://github.com/tj/commander.js) (flag parsing),
-  [`parse-duration`](https://github.com/jkroso/parse-duration) (timeout duration parsing).
+  [`parse-duration`](https://github.com/jkroso/parse-duration) (timeout duration parsing),
+  [`vue`](https://vuejs.org) + [`vuetify`](https://vuetifyjs.com) (browser builds vendored
+  from `node_modules` to serve the status UI on `/` — not bundled, no build step).
 - Dev deps: `typescript`, `@types/node`, `vitest`, `@vitest/coverage-v8`,
   `eslint` (v10, flat config), `@eslint/js`, `typescript-eslint`, `prettier`.
 
 ### Layout
 
-- [src/main.ts](src/main.ts) — entrypoint: HTTP server, PBS API client, metric collection.
+- [src/main.ts](src/main.ts) — entrypoint: HTTP server, PBS API client, metric collection,
+  status UI routes (`/`, `/api/status`, `/assets/*`).
 - [src/config.ts](src/config.ts) — config loading (flags + env), pure and unit-tested.
 - [src/config.test.ts](src/config.test.ts) — vitest unit tests for the config module.
+- [src/status.ts](src/status.ts) — in-memory per-target scrape-status store powering the UI; unit-tested.
+- [src/status.test.ts](src/status.test.ts) — vitest unit tests for the status store.
+- [src/web/](src/web) — status UI: `index.html` shell + `app.js` (Vue 3 + Vuetify 3, no build step).
 
 ## Commands
 

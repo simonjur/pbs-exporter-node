@@ -40,7 +40,7 @@ MUST preserve metric names, labels, and help strings.
 |----|-------------|--------|
 | REQ-RT-1 | Runs on Node.js >= 24 directly from TypeScript (native type stripping); no separate build step required to run. | `node src/main.ts --version` prints a version line and exits 0. **[offline-ok]** |
 | REQ-RT-2 | Type-checks cleanly. | `npm run lint:ts` exits 0. **[offline-ok]** |
-| REQ-RT-3 | Runtime dependencies are limited to `prom-client`, `undici`, `commander`, and `parse-duration`. | Inspect `package.json` `dependencies`. **[offline-ok]** |
+| REQ-RT-3 | Core runtime dependencies are `prom-client`, `undici`, `commander`, and `parse-duration`; the status UI (§12) additionally vendors `vue` and `vuetify` (served as browser builds, not bundled). | Inspect `package.json` `dependencies`. **[offline-ok]** |
 | REQ-RT-4 | Config-loading logic lives in [`src/config.ts`](src/config.ts) (separate from `main.ts`) and is covered by vitest unit tests run via `npm run tests:unit`. | `npm run tests:unit` exits 0 with all tests passing. **[offline-ok]** |
 | REQ-RT-5 | `npm run tests:unit:coverage` generates coverage reports under `coverage/`: HTML (`index.html`), Cobertura XML (`cobertura-coverage.xml`, for GitHub) and LCOV (`lcov.info`, for SonarQube via `sonar.javascript.lcov.reportPaths`). | Run it; assert the three artifacts exist. **[offline-ok]** |
 | REQ-RT-6 | All `.ts` files lint cleanly under ESLint 10 (flat config in [`eslint.config.mjs`](eslint.config.mjs), using `@eslint/js` + `typescript-eslint` recommended rules). | `npm run lint:eslint` exits 0. **[offline-ok]** |
@@ -70,7 +70,7 @@ Precedence (lowest → highest): built-in default → CLI flag → environment v
 | ID | Requirement | Verify |
 |----|-------------|--------|
 | REQ-HTTP-1 | Listens on the configured address/port; `:PORT` binds all interfaces. | `curl -s http://localhost:19099/` returns 200. **[offline-ok]** |
-| REQ-HTTP-2 | `GET /` returns an HTML landing page with a link to the metrics path. | Response body contains `Proxmox Backup Server Exporter` and `href='/metrics'`. **[offline-ok]** |
+| REQ-HTTP-2 | `GET /` returns the HTML shell for the status UI (§12), which loads the vendored Vue/Vuetify assets and `/assets/app.js`. | Response is `text/html` and references `/assets/app.js`. **[offline-ok]** |
 | REQ-HTTP-3 | `GET <metrics-path>` returns Prometheus text format with `Content-Type` from prom-client. | `curl -sI http://localhost:19099/metrics` shows `text/plain; version=0.0.4`. **[offline-ok]** |
 | REQ-HTTP-4 | Unknown paths return HTTP 404. | `curl -s -o /dev/null -w '%{http_code}' http://localhost:19099/nope` → `404`. **[offline-ok]** |
 | REQ-HTTP-5 | Target resolution: if `endpoint` is configured it is always used; otherwise the `?target=` query param is used; otherwise default `http://localhost:8007`. | With no endpoint set, `GET /metrics?target=http://localhost:1` attempts that target (debug log shows it). **[offline-ok]** |
@@ -186,3 +186,24 @@ under `ghcr.io/simonjur/pbs-exporter-node`.
 | REQ-REL-2 | A push to `main` publishes the `:alpha` tag. | Inspect the `docker/metadata-action` `tags` rule (`type=raw,value=alpha` enabled on `refs/heads/main`). **[offline-ok]** |
 | REQ-REL-3 | A push of a `v*` tag publishes a `:v<version>` tag equal to the git tag name (e.g. `v1.2.3`). | Inspect the `docker/metadata-action` `tags` rule (`type=ref,event=tag`). **[offline-ok]** |
 | REQ-REL-4 | [`docker-compose.yaml`](docker-compose.yaml) references the published image `ghcr.io/simonjur/pbs-exporter-node:alpha`. | Inspect the compose `image:` field. **[offline-ok]** |
+
+---
+
+## 12. Status UI
+
+The root path `/` serves a human-facing status dashboard (the Prometheus metrics
+remain on the configured metrics path). It is a Vue 3 + Vuetify 3 single-page app;
+both libraries are served as browser builds vendored from `node_modules` at runtime
+(no CDN), so the page works in air-gapped environments. The page is backed by an
+in-memory store ([`src/status.ts`](src/status.ts)) that holds the **latest** scrape
+result per resolved target — the exporter is otherwise stateless, so a target only
+appears once it has been scraped (or, for a fixed `endpoint`, it is seeded as
+*pending* at startup).
+
+| ID | Requirement | Verify |
+|----|-------------|--------|
+| REQ-UI-1 | `GET /` serves the Vue 3 + Vuetify 3 status page; its assets are served locally under `/assets/` (`app.js`, `vue.global.prod.js`, `vuetify.min.js`, `vuetify.min.css`) with correct content types — never fetched from a CDN. | `curl -sI /assets/vuetify.min.css` → `text/css`; `/assets/vue.global.prod.js` and `/assets/app.js` → `text/javascript`; page HTML contains no external `http(s)://` asset URLs. **[offline-ok]** |
+| REQ-UI-2 | `GET /api/status` returns JSON: `{ exporter: {version, commit, buildTime}, summary: {total, up, down, pending}, targets: [{target, up, version, release, lastScrapeMs, error}] }`. | `curl -s /api/status \| jq` shows the documented shape. **[offline-ok]** |
+| REQ-UI-3 | The store records the latest result per resolved target after each scrape; counts in `summary` reflect `up` (`up===true`), `down` (`up===false`), and `pending` (never scraped). A fixed `endpoint` is seeded as `pending` before its first scrape. | With `PBS_ENDPOINT` set, `/api/status` shows the target as `pending` before any `/metrics` hit, then `up`/`down` after. **[offline-ok]** |
+| REQ-UI-4 | For an `up` target the UI/API expose the PBS `version` (and `release`) and the last-scrape time; for a `down` target the `error` message from the failed scrape is shown. | Scrape an unreachable target → `/api/status` target has `up:false` and a non-null `error`; scrape a working PBS → `up:true` with a `version`. **[offline-ok]** for the error path; **[needs-pbs]** for the populated version. |
+| REQ-UI-5 | The status store is a separate, unit-tested module. | `npm run tests:unit` includes `src/status.test.ts` and passes. **[offline-ok]** |
