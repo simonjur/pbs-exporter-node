@@ -78,6 +78,7 @@ describe("loadConfig", () => {
       metricsPath: "/metrics",
       listenAddress: ":10019",
       loglevel: "info",
+      logformat: "text",
       showVersion: false,
     });
   });
@@ -144,6 +145,26 @@ describe("loadConfig", () => {
   it("throws on an invalid timeout duration", () => {
     expect(() => loadConfig(argv(), { PBS_TIMEOUT: "nonsense" })).toThrow(
       /invalid duration/,
+    );
+  });
+
+  it("reads the log format from flag and env", () => {
+    expect(loadConfig(argv("--pbs.logformat=json"), noEnv).logformat).toBe(
+      "json",
+    );
+    expect(loadConfig(argv(), { PBS_LOGFORMAT: "json" }).logformat).toBe(
+      "json",
+    );
+    // Env overrides flag.
+    expect(
+      loadConfig(argv("--pbs.logformat=json"), { PBS_LOGFORMAT: "text" })
+        .logformat,
+    ).toBe("text");
+  });
+
+  it("throws on an invalid log format", () => {
+    expect(() => loadConfig(argv(), { PBS_LOGFORMAT: "xml" })).toThrow(
+      /invalid log format/,
     );
   });
 });

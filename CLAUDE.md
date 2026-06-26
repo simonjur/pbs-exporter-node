@@ -17,6 +17,7 @@ TypeScript via Node's native type stripping — there is no required build step 
   [`undici`](https://github.com/nodejs/undici) (HTTP/TLS dispatcher for `fetch`),
   [`commander`](https://github.com/tj/commander.js) (flag parsing),
   [`parse-duration`](https://github.com/jkroso/parse-duration) (timeout duration parsing),
+  [`winston`](https://github.com/winstonjs/winston) (logging),
   [`vue`](https://vuejs.org) + [`vuetify`](https://vuetifyjs.com) (browser builds vendored
   from `node_modules` to serve the status UI on `/` — not bundled, no build step).
 - Dev deps: `typescript`, `@types/node`, `vitest`, `@vitest/coverage-v8`,
@@ -24,8 +25,19 @@ TypeScript via Node's native type stripping — there is no required build step 
 
 ### Layout
 
-- [src/main.ts](src/main.ts) — entrypoint: HTTP server, PBS API client, metric collection,
-  status UI routes (`/`, `/api/status`, `/assets/*`).
+- [src/main.ts](src/main.ts) — entrypoint only: loads config, wires collaborators,
+  starts the HTTP server. Thin and excluded from coverage.
+- [src/exporter.ts](src/exporter.ts) — the `Exporter` PBS API client and per-scrape metric
+  collection (timeout + TLS dispatcher injected); unit-tested.
+- [src/exporter.test.ts](src/exporter.test.ts) — vitest tests driving the exporter with
+  mocked PBS responses (`fetch` stubbed).
+- [src/server.ts](src/server.ts) — HTTP layer: `/metrics` scrape, `/api/status` feed, static
+  asset serving, `parseListenAddress`; unit-tested.
+- [src/server.test.ts](src/server.test.ts) / [src/server.assets.test.ts](src/server.assets.test.ts) — vitest tests for the HTTP layer.
+- [src/metrics.ts](src/metrics.ts) — `buildMetrics` (prom-client gauge definitions), built fresh per scrape.
+- [src/log.ts](src/log.ts) — winston logger with selectable output (`text` → `LEVEL: message`, `json` → one JSON object per line), log-level/format accessors, and the `sanitize` log-injection guard.
+- [src/buildinfo.ts](src/buildinfo.ts) — build metadata (version/commit/build time).
+- [src/pbs.fixtures.ts](src/pbs.fixtures.ts) — mock PBS API responses + test helpers (`makeFetchMock`, `metricValue`).
 - [src/config.ts](src/config.ts) — config loading (flags + env), pure and unit-tested.
 - [src/config.test.ts](src/config.test.ts) — vitest unit tests for the config module.
 - [src/status.ts](src/status.ts) — in-memory per-target scrape-status store powering the UI; unit-tested.

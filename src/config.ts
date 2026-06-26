@@ -19,8 +19,11 @@ export type Config = {
   metricsPath: string;
   listenAddress: string;
   loglevel: string;
+  logformat: LogFormat;
   showVersion: boolean;
 };
+
+export type LogFormat = "text" | "json";
 
 /** Read the first line of a secret file (matches the Go bufio.Scanner behaviour). */
 export function readSecretFile(filename: string): string {
@@ -83,6 +86,7 @@ export function loadConfig(
       ":10019",
     )
     .option("--pbs.loglevel <level>", "Loglevel", "info")
+    .option("--pbs.logformat <format>", "Log format (text|json)", "text")
     .option("--version", "Show version and exit", false)
     .parse(argv);
 
@@ -94,6 +98,13 @@ export function loadConfig(
   const timeout = parse(timeoutRaw);
   if (timeout === null) throw new Error(`invalid duration: ${timeoutRaw}`);
 
+  // Resolve and validate the log format (default → flag → env).
+  let logformatRaw: string = opts["pbs.logformat"];
+  if (env.PBS_LOGFORMAT) logformatRaw = env.PBS_LOGFORMAT;
+  if (logformatRaw !== "text" && logformatRaw !== "json")
+    throw new Error(`invalid log format: ${logformatRaw}`);
+  const logformat: LogFormat = logformatRaw;
+
   const config: Config = {
     endpoint: opts["pbs.endpoint"],
     username: opts["pbs.username"],
@@ -104,6 +115,7 @@ export function loadConfig(
     metricsPath: opts["pbs.metricsPath"],
     listenAddress: opts["pbs.listenAddress"],
     loglevel: opts["pbs.loglevel"],
+    logformat,
     showVersion: opts["version"] === true,
   };
 

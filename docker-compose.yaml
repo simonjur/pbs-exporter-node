@@ -1,6 +1,9 @@
 services:
   pbs-exporter:
     image: ghcr.io/simonjur/pbs-exporter-node:alpha
+    build:
+        context: .
+        dockerfile: Dockerfile
     container_name: pbs-exporter
     user: '65534'
     restart: always
