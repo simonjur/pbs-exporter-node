@@ -3,10 +3,13 @@
 ## Specification (source of truth)
 
 [SPEC.md](SPEC.md) is the spec-driven-development source of truth for what the
-exporter must do. Each requirement has a stable `REQ-*` ID and a verification method.
-When behavior changes, update SPEC.md **first**, then the code, then re-verify against
-it. To check the app does what it's supposed to, work through SPEC.md's "How to verify"
-section and report PASS/FAIL/SKIP per requirement ID.
+exporter must do. It is an index; the requirements live in per-area files under
+[spec/](spec/) (e.g. [spec/configuration.md](spec/configuration.md),
+[spec/http-server.md](spec/http-server.md)), each grouping a set of stable `REQ-*` IDs
+with a verification method. When behavior changes, update the relevant `spec/` file
+**first** (and the index if an area is added/removed), then the code, then re-verify
+against it. To check the app does what it's supposed to, work through SPEC.md's "How to
+verify" section and report PASS/FAIL/SKIP per requirement ID.
 
 ## Stack
 
