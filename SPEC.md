@@ -54,3 +54,4 @@ MUST preserve metric names, labels, and help strings.
 | 10 | [Node.js runtime metrics](spec/nodejs-runtime-metrics.md) | `REQ-NODE-*` |
 | 11 | [Container image & release](spec/container-image-and-release.md) | `REQ-IMG-*`, `REQ-REL-*` |
 | 12 | [Status UI](spec/status-ui.md) | `REQ-UI-*` |
+| 13 | [Testing](spec/testing.md) | `REQ-TEST-*` |

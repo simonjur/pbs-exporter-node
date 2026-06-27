@@ -28,23 +28,27 @@ TypeScript via Node's native type stripping — there is no required build step 
 
 ### Layout
 
+Tests live under [`src/__tests__/`](src/__tests__) (mirroring the `src/` layout) with the
+`*.test.ts` suffix; shared fixtures/helpers sit alongside them (`pbs.fixtures.ts`). See the
+[testing spec](spec/testing.md) (`REQ-TEST-*`) for the authoritative testing conventions.
+
 - [src/main.ts](src/main.ts) — entrypoint only: loads config, wires collaborators,
   starts the HTTP server. Thin and excluded from coverage.
 - [src/exporter.ts](src/exporter.ts) — the `Exporter` PBS API client and per-scrape metric
   collection (timeout + TLS dispatcher injected); unit-tested.
-- [src/exporter.test.ts](src/exporter.test.ts) — vitest tests driving the exporter with
+- [src/__tests__/exporter.test.ts](src/__tests__/exporter.test.ts) — vitest tests driving the exporter with
   mocked PBS responses (`fetch` stubbed).
 - [src/server.ts](src/server.ts) — HTTP layer: `/metrics` scrape, `/api/status` feed, static
   asset serving, `parseListenAddress`; unit-tested.
-- [src/server.test.ts](src/server.test.ts) / [src/server.assets.test.ts](src/server.assets.test.ts) — vitest tests for the HTTP layer.
+- [src/__tests__/server.test.ts](src/__tests__/server.test.ts) / [src/__tests__/server.assets.test.ts](src/__tests__/server.assets.test.ts) — vitest tests for the HTTP layer.
 - [src/metrics.ts](src/metrics.ts) — `buildMetrics` (prom-client gauge definitions), built fresh per scrape.
 - [src/log.ts](src/log.ts) — winston logger with selectable output (`text` → `LEVEL: message`, `json` → one JSON object per line), log-level/format accessors, and the `sanitize` log-injection guard.
 - [src/buildinfo.ts](src/buildinfo.ts) — build metadata (version/commit/build time).
-- [src/pbs.fixtures.ts](src/pbs.fixtures.ts) — mock PBS API responses + test helpers (`makeFetchMock`, `metricValue`).
+- [src/__tests__/pbs.fixtures.ts](src/__tests__/pbs.fixtures.ts) — mock PBS API responses + test helpers (`makeFetchMock`, `metricValue`).
 - [src/config.ts](src/config.ts) — config loading (flags + env), pure and unit-tested.
-- [src/config.test.ts](src/config.test.ts) — vitest unit tests for the config module.
+- [src/__tests__/config.test.ts](src/__tests__/config.test.ts) — vitest unit tests for the config module.
 - [src/status.ts](src/status.ts) — in-memory per-target scrape-status store powering the UI; unit-tested.
-- [src/status.test.ts](src/status.test.ts) — vitest unit tests for the status store.
+- [src/__tests__/status.test.ts](src/__tests__/status.test.ts) — vitest unit tests for the status store.
 - [src/web/](src/web) — status UI: `index.html` shell + `app.js` (Vue 3 + Vuetify 3, no build step).
 
 ## Commands

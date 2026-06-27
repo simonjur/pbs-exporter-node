@@ -1,11 +1,19 @@
 # Proxmox Backup Server Exporter
 
 [![license](https://img.shields.io/github/license/natrontech/pbs-exporter)](https://github.com/natrontech/pbs-exporter/blob/main/LICENSE)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/natrontech/pbs-exporter/badge)](https://securityscorecards.dev/viewer/?uri=github.com/natrontech/pbs-exporter)
-[![release](https://img.shields.io/github/v/release/natrontech/pbs-exporter)](https://github.com/natrontech/pbs-exporter/releases)
-[![go-version](https://img.shields.io/github/go-mod/go-version/natrontech/pbs-exporter)](https://github.com/natrontech/pbs-exporter/blob/main/go.mod)
-[![Go Report Card](https://goreportcard.com/badge/github.com/natrontech/pbs-exporter)](https://goreportcard.com/report/github.com/natrontech/pbs-exporter)
-[![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
+[![Built with Claude AI](https://img.shields.io/badge/Built%20with-Claude%20AI-D97757)](https://claude.ai/)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=bugs)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=coverage)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=simonjur_pbs-exporter&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=simonjur_pbs-exporter)
+[![CodeQL](https://github.com/simonjur/pbs-exporter/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/simonjur/pbs-exporter/actions/workflows/github-code-scanning/codeql)
 
 ---
 

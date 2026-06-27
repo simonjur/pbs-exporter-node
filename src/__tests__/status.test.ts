@@ -5,7 +5,7 @@ import {
   recordScrape,
   resetStatuses,
   seedTarget,
-} from "./status.ts";
+} from "../status.ts";
 
 afterEach(() => {
   resetStatuses();

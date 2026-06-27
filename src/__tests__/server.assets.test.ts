@@ -7,7 +7,7 @@ vi.mock("node:fs/promises", () => ({
   readFile: () => Promise.reject(new Error("ENOENT")),
 }));
 
-import { serveStaticAsset } from "./server.ts";
+import { serveStaticAsset } from "../server.ts";
 
 type MockRes = ServerResponse & { statusCode: number; body: unknown };
 

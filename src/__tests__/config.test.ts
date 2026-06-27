@@ -8,7 +8,7 @@ import {
   parseBool,
   readSecretFile,
   validateTarget,
-} from "./config.ts";
+} from "../config.ts";
 
 /** Build a process-style argv ("node", "script", ...flags) for loadConfig. */
 function argv(...flags: string[]): string[] {

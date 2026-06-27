@@ -6,9 +6,9 @@ import {
   parseListenAddress,
   serveStaticAsset,
   type RequestContext,
-} from "./server.ts";
-import type { Config } from "./config.ts";
-import { getStatuses, resetStatuses } from "./status.ts";
+} from "../server.ts";
+import type { Config } from "../config.ts";
+import { getStatuses, resetStatuses } from "../status.ts";
 import { healthyRoutes, makeFetchMock, type Routes } from "./pbs.fixtures.ts";
 
 const realFetch = globalThis.fetch;

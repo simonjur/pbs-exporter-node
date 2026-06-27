@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Registry } from "prom-client";
-import { Exporter, findLastSnapshotWithBackupID } from "./exporter.ts";
-import { buildMetrics, type Metrics } from "./metrics.ts";
+import { Exporter, findLastSnapshotWithBackupID } from "../exporter.ts";
+import { buildMetrics, type Metrics } from "../metrics.ts";
 import {
   datastoreUsageResponse,
   healthyRoutes,
