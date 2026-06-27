@@ -58,7 +58,7 @@ npm install                  # install dependencies
 npm start                    # run the exporter (node --env-file=.env src/main.ts)
 npm run dev                  # run with --watch for local development
 npm run lint:ts              # type-check only (tsc --noEmit) — must exit 0
-npm run lint:eslint          # lint all .ts files with ESLint 10 — must exit 0
+npm run lint:eslint          # lint all .ts files + src/web/app.js with ESLint 10 — must exit 0
 npm run lint:prettier        # check formatting of all .ts files — must exit 0
 npm run format               # auto-fix formatting with Prettier (--write)
 npm run tests:unit           # run vitest unit tests

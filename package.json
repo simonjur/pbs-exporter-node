@@ -12,7 +12,7 @@
     "start": "node --env-file=.env src/main.ts",
     "dev": "node --env-file=.env --watch src/main.ts",
     "lint:ts": "tsc --noEmit",
-    "lint:eslint": "eslint \"**/*.ts\"",
+    "lint:eslint": "eslint \"**/*.ts\" src/web/app.js",
     "lint:prettier": "prettier --check \"**/*.ts\"",
     "format": "prettier --write \"**/*.ts\"",
     "tests:unit": "vitest run",
