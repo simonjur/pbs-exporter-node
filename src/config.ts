@@ -81,14 +81,17 @@ export function parseBool(input: string): boolean {
   switch (input.toLowerCase()) {
     case "1":
     case "t":
-    case "true":
+    case "true": {
       return true;
+    }
     case "0":
     case "f":
-    case "false":
+    case "false": {
       return false;
-    default:
+    }
+    default: {
       throw new Error(`invalid boolean: ${input}`);
+    }
   }
 }
 

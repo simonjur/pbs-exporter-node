@@ -80,28 +80,26 @@ export function parseListenAddress(addr: string): {
   host: string | undefined;
   port: number;
 } {
-  const idx = addr.lastIndexOf(":");
-  const host = idx > 0 ? addr.slice(0, idx) : undefined;
-  const port = Number.parseInt(addr.slice(idx + 1), 10);
+  const index = addr.lastIndexOf(":");
+  const host = index > 0 ? addr.slice(0, index) : undefined;
+  const port = Number.parseInt(addr.slice(index + 1), 10);
   return { host, port };
 }
 
 export async function handleRequest(
-  req: IncomingMessage,
+  request: IncomingMessage,
   res: ServerResponse,
-  ctx: RequestContext,
+  context: RequestContext,
 ): Promise<void> {
-  const { config } = ctx;
-  const url = new URL(req.url ?? "/", "http://localhost");
+  const { config } = context;
+  const url = new URL(request.url ?? "/", "http://localhost");
 
   if (url.pathname === config.metricsPath) {
     // Determine the target endpoint.
-    let rawTarget: string;
-    if (config.endpoint === "") {
-      rawTarget = url.searchParams.get("target") ?? "http://localhost:8007";
-    } else {
-      rawTarget = config.endpoint;
-    }
+    const rawTarget =
+      config.endpoint === ""
+        ? (url.searchParams.get("target") ?? "http://localhost:8007")
+        : config.endpoint;
 
     log.debug(`Using connection endpoint ${sanitize(rawTarget)}`);
 
@@ -110,9 +108,9 @@ export async function handleRequest(
     // re-validates the full URL at the fetch boundary.
     try {
       validateUrl(rawTarget);
-    } catch (err) {
+    } catch (error) {
       log.error(
-        `Rejected target ${sanitize(rawTarget)}: ${err instanceof Error ? err.message : String(err)}`,
+        `Rejected target ${sanitize(rawTarget)}: ${error instanceof Error ? error.message : String(error)}`,
       );
       res.statusCode = 400;
       res.end("400 invalid target");
@@ -128,8 +126,8 @@ export async function handleRequest(
       username: config.username,
       apiToken: config.apiToken,
       apiTokenName: config.apiTokenName,
-      timeoutMs: ctx.timeoutMs,
-      dispatcher: ctx.dispatcher,
+      timeoutMs: context.timeoutMs,
+      dispatcher: context.dispatcher,
     });
     const result = await exporter.collect(metrics);
     recordScrape({
@@ -142,7 +140,7 @@ export async function handleRequest(
     });
 
     // Combine PBS scrape metrics with the persistent Node.js process metrics.
-    const merged = Registry.merge([ctx.defaultRegistry, registry]);
+    const merged = Registry.merge([context.defaultRegistry, registry]);
     res.setHeader("Content-Type", merged.contentType);
     res.end(await merged.metrics());
     return;
@@ -186,9 +184,9 @@ export async function serveStaticAsset(
     }
     res.setHeader("Content-Type", asset.type);
     res.end(body);
-  } catch (err) {
+  } catch (error) {
     log.error(
-      `Failed to serve asset ${sanitize(pathname)}: ${err instanceof Error ? err.message : String(err)}`,
+      `Failed to serve asset ${sanitize(pathname)}: ${error instanceof Error ? error.message : String(error)}`,
     );
     res.statusCode = 500;
     res.end("500 internal server error");

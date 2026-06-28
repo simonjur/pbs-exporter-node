@@ -53,7 +53,7 @@ function mockRes(): MockRes {
   return res as unknown as MockRes;
 }
 
-function mockReq(url: string): IncomingMessage {
+function mockRequest(url: string): IncomingMessage {
   return { url } as IncomingMessage;
 }
 
@@ -74,7 +74,7 @@ function baseConfig(overrides: Partial<Config> = {}): Config {
   };
 }
 
-function ctx(config: Config): RequestContext {
+function context(config: Config): RequestContext {
   return {
     config,
     defaultRegistry: new Registry(),
@@ -93,7 +93,7 @@ describe("handleRequest — /metrics", () => {
     installFetch(healthyRoutes());
     const res = mockRes();
 
-    await handleRequest(mockReq("/metrics"), res, ctx(baseConfig()));
+    await handleRequest(mockRequest("/metrics"), res, context(baseConfig()));
 
     const body = String(res.body);
     expect(res.headers["Content-Type"]).toContain("text/plain");
@@ -106,7 +106,11 @@ describe("handleRequest — /metrics", () => {
 
   it("records the scrape result in the status store", async () => {
     installFetch(healthyRoutes());
-    await handleRequest(mockReq("/metrics"), mockRes(), ctx(baseConfig()));
+    await handleRequest(
+      mockRequest("/metrics"),
+      mockRes(),
+      context(baseConfig()),
+    );
 
     const [status] = getStatuses();
     expect(status).toMatchObject({
@@ -121,9 +125,9 @@ describe("handleRequest — /metrics", () => {
   it("uses the ?target= query param when no fixed endpoint is set", async () => {
     const mock = installFetch(healthyRoutes());
     await handleRequest(
-      mockReq("/metrics?target=https://other:8007"),
+      mockRequest("/metrics?target=https://other:8007"),
       mockRes(),
-      ctx(baseConfig({ endpoint: "" })),
+      context(baseConfig({ endpoint: "" })),
     );
 
     expect(mock.calls[0]?.path).toBe("/api2/json/version");
@@ -136,7 +140,7 @@ describe("handleRequest — /metrics", () => {
     installFetch(routes);
     const res = mockRes();
 
-    await handleRequest(mockReq("/metrics"), res, ctx(baseConfig()));
+    await handleRequest(mockRequest("/metrics"), res, context(baseConfig()));
 
     expect(String(res.body)).toContain("pbs_up 0");
     const [status] = getStatuses();
@@ -149,9 +153,9 @@ describe("handleRequest — /metrics", () => {
     const res = mockRes();
 
     await handleRequest(
-      mockReq("/metrics?target=file:///etc/passwd"),
+      mockRequest("/metrics?target=file:///etc/passwd"),
       res,
-      ctx(baseConfig({ endpoint: "" })),
+      context(baseConfig({ endpoint: "" })),
     );
 
     expect(res.statusCode).toBe(400);
@@ -166,9 +170,9 @@ describe("handleRequest — /metrics", () => {
     const res = mockRes();
 
     await handleRequest(
-      mockReq("/custom-metrics"),
+      mockRequest("/custom-metrics"),
       res,
-      ctx(baseConfig({ metricsPath: "/custom-metrics" })),
+      context(baseConfig({ metricsPath: "/custom-metrics" })),
     );
 
     expect(String(res.body)).toContain("pbs_up 1");
@@ -179,10 +183,14 @@ describe("handleRequest — status UI feed", () => {
   it("serves /api/status as JSON", async () => {
     installFetch(healthyRoutes());
     // Seed a scrape so the summary/targets are populated.
-    await handleRequest(mockReq("/metrics"), mockRes(), ctx(baseConfig()));
+    await handleRequest(
+      mockRequest("/metrics"),
+      mockRes(),
+      context(baseConfig()),
+    );
 
     const res = mockRes();
-    await handleRequest(mockReq("/api/status"), res, ctx(baseConfig()));
+    await handleRequest(mockRequest("/api/status"), res, context(baseConfig()));
 
     expect(res.headers["Content-Type"]).toContain("application/json");
     const payload = JSON.parse(String(res.body));
@@ -195,7 +203,7 @@ describe("handleRequest — status UI feed", () => {
 describe("handleRequest — static assets and 404", () => {
   it("serves the status UI index.html on /", async () => {
     const res = mockRes();
-    await handleRequest(mockReq("/"), res, ctx(baseConfig()));
+    await handleRequest(mockRequest("/"), res, context(baseConfig()));
 
     expect(res.headers["Content-Type"]).toContain("text/html");
     expect(String(res.body)).toContain("<!doctype html>");
@@ -203,7 +211,7 @@ describe("handleRequest — static assets and 404", () => {
 
   it("returns 404 for an unknown path", async () => {
     const res = mockRes();
-    await handleRequest(mockReq("/nope"), res, ctx(baseConfig()));
+    await handleRequest(mockRequest("/nope"), res, context(baseConfig()));
 
     expect(res.statusCode).toBe(404);
     expect(String(res.body)).toContain("404");
@@ -219,7 +227,7 @@ describe("serveStaticAsset", () => {
 
 describe("parseListenAddress", () => {
   it.each([
-    [":10019", { host: undefined, port: 10019 }],
+    [":10019", { host: undefined, port: 10_019 }],
     ["127.0.0.1:9000", { host: "127.0.0.1", port: 9000 }],
     ["0.0.0.0:8080", { host: "0.0.0.0", port: 8080 }],
   ])("parses %j", (input, expected) => {
