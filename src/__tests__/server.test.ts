@@ -1,6 +1,19 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Registry } from "prom-client";
+
+// The status-UI assets live in the generated `public/` dir (built by
+// `npm run build:fe`), which may not exist when running tests. Mock the file
+// read so static-asset serving is exercised without depending on the real
+// `public/` directory. (Kept module-wide: only the `/` asset test reads a file.)
+vi.mock("node:fs/promises", () => ({
+  readFile: () =>
+    Promise.resolve(
+      Buffer.from(
+        '<!doctype html>\n<html><head><title>PBS Exporter — Status</title></head><body><div id="app"></div></body></html>',
+      ),
+    ),
+}));
 import {
   handleRequest,
   parseListenAddress,
