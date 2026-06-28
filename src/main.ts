@@ -70,7 +70,7 @@ export function main(config: Config): void {
 
   if (getLogLevel() === "debug") {
     log.debug(`Using connection endpoint: ${sanitize(config.endpoint)}`);
-    log.debug(`Using connection username: ${config.username}`);
+    log.debug(`Using connection username: (hidden)`);
     log.debug(`Using connection apitoken: ${config.apiToken}`);
     log.debug(`Using connection apitokenname: ${config.apiTokenName}`);
     log.debug(`Using connection timeout: ${timeoutMs}ms`);
