@@ -4,10 +4,10 @@
  * TypeScript/Node.js 24+ rewrite of the original Go exporter.
  * Uses the native `fetch`/`undici` HTTP stack and the `prom-client` library.
  *
- * This module is just the process entrypoint: it loads configuration, wires up
- * the collaborators and starts the HTTP server. The testable logic lives in
- * `exporter.ts` (PBS API client), `server.ts` (HTTP layer), `metrics.ts`,
- * `config.ts` and `status.ts`.
+ * This module exposes `main(config)`: it wires up the collaborators and starts
+ * the HTTP server. CLI parsing and config loading happen in the entrypoint
+ * (`run.ts`); the testable logic lives in `exporter.ts` (PBS API client),
+ * `server.ts` (HTTP layer), `metrics.ts`, `config.ts` and `status.ts`.
  */
 
 import {
@@ -17,7 +17,7 @@ import {
 } from "node:http";
 import { Agent } from "undici";
 import { Registry, collectDefaultMetrics } from "prom-client";
-import { type Config, loadConfig, parseBool } from "./config.ts";
+import { type Config, parseBool } from "./config.ts";
 import {
   log,
   sanitize,
@@ -33,17 +33,7 @@ import { Version, Commit, BuildTime } from "./buildinfo.ts";
 // Collected once at startup — NOT rebuilt per scrape, unlike the PBS metrics.
 const defaultRegistry = new Registry();
 
-function main(): void {
-  let config: Config;
-  try {
-    config = loadConfig();
-  } catch (err) {
-    log.error(
-      `Unable to load configuration: ${err instanceof Error ? err.message : String(err)}`,
-    );
-    process.exit(1);
-  }
-
+export function main(config: Config): void {
   if (config.showVersion) {
     console.log(
       `PBS Exporter Version: ${Version}, Commit: ${Commit}, Build Time: ${BuildTime}`,
@@ -80,7 +70,7 @@ function main(): void {
 
   if (getLogLevel() === "debug") {
     log.debug(`Using connection endpoint: ${sanitize(config.endpoint)}`);
-    log.debug(`Using connection username: ${config.username}`);
+    log.debug(`Using connection username: (hidden)`);
     log.debug(`Using connection apitoken: ${config.apiToken}`);
     log.debug(`Using connection apitokenname: ${config.apiTokenName}`);
     log.debug(`Using connection timeout: ${timeoutMs}ms`);
@@ -114,5 +104,3 @@ function main(): void {
   const { host, port } = parseListenAddress(config.listenAddress);
   server.listen(port, host);
 }
-
-main();

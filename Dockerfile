@@ -30,5 +30,5 @@ USER 65534
 
 EXPOSE 10019
 
-# Node 24 strips TS types natively, so main.ts is executed directly.
-ENTRYPOINT ["node", "src/main.ts"]
+# Node 24 strips TS types natively, so the TS entrypoint is executed directly.
+ENTRYPOINT ["node", "src/run.ts"]
