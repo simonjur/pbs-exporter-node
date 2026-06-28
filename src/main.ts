@@ -51,8 +51,8 @@ export function main(config: Config): void {
   // Fail fast if the pre-built status-UI assets are missing.
   try {
     assertPublicDir();
-  } catch (err) {
-    log.error(err instanceof Error ? err.message : String(err));
+  } catch (error) {
+    log.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 
@@ -63,12 +63,12 @@ export function main(config: Config): void {
   // Register default Node.js process/runtime metrics once.
   collectDefaultMetrics({ register: defaultRegistry });
 
-  let insecureBool: boolean;
+  let isInsecureBool: boolean;
   try {
-    insecureBool = parseBool(config.insecure);
-  } catch (err) {
+    isInsecureBool = parseBool(config.insecure);
+  } catch (error) {
     log.error(
-      `Unable to parse insecure: ${err instanceof Error ? err.message : String(err)}`,
+      `Unable to parse insecure: ${error instanceof Error ? error.message : String(error)}`,
     );
     process.exit(1);
   }
@@ -77,7 +77,7 @@ export function main(config: Config): void {
 
   // Configure the TLS dispatcher (allow self-signed certs when insecure).
   const dispatcher = new Agent({
-    connect: { rejectUnauthorized: !insecureBool, minVersion: "TLSv1.2" },
+    connect: { rejectUnauthorized: !isInsecureBool, minVersion: "TLSv1.2" },
   });
 
   if (getLogLevel() === "debug") {
@@ -86,7 +86,7 @@ export function main(config: Config): void {
     log.debug(`Using connection apitoken: ${config.apiToken}`);
     log.debug(`Using connection apitokenname: ${config.apiTokenName}`);
     log.debug(`Using connection timeout: ${timeoutMs}ms`);
-    log.debug(`Using connection insecure: ${insecureBool}`);
+    log.debug(`Using connection insecure: ${isInsecureBool}`);
     log.debug(`Using metrics path: ${config.metricsPath}`);
     log.debug(`Using listen address: ${config.listenAddress}`);
   }
@@ -99,14 +99,16 @@ export function main(config: Config): void {
   log.info(`Listening on: ${config.listenAddress}`);
   log.info(`Metrics path: ${config.metricsPath}`);
 
-  const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-    void handleRequest(req, res, {
-      config,
-      defaultRegistry,
-      timeoutMs,
-      dispatcher,
-    });
-  });
+  const server = createServer(
+    (request: IncomingMessage, res: ServerResponse) => {
+      void handleRequest(request, res, {
+        config,
+        defaultRegistry,
+        timeoutMs,
+        dispatcher,
+      });
+    },
+  );
 
   // Go's WriteTimeout/ReadTimeout were 10s.
   server.headersTimeout = 10_000;

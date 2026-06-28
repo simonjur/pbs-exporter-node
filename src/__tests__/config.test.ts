@@ -15,7 +15,7 @@ import {
  * Build a parsed-options object as commander would produce it (defaults applied),
  * with per-test overrides. Mirrors the `.option()` defaults declared in run.ts.
  */
-function opts(overrides: Partial<CliOptions> = {}): CliOptions {
+function options(overrides: Partial<CliOptions> = {}): CliOptions {
   return {
     "pbs.endpoint": "",
     "pbs.username": "root@pam",
@@ -33,18 +33,18 @@ function opts(overrides: Partial<CliOptions> = {}): CliOptions {
 }
 
 // Temp files created during tests, cleaned up afterwards.
-const tmpFiles: string[] = [];
+const temporaryFiles: string[] = [];
 function secretFile(contents: string): string {
   const dir = mkdtempSync(join(tmpdir(), "pbs-exporter-test-"));
   const path = join(dir, "secret");
   writeFileSync(path, contents);
-  tmpFiles.push(dir);
+  temporaryFiles.push(dir);
   return path;
 }
 
 afterEach(() => {
-  while (tmpFiles.length)
-    rmSync(tmpFiles.pop()!, { recursive: true, force: true });
+  while (temporaryFiles.length > 0)
+    rmSync(temporaryFiles.pop()!, { recursive: true, force: true });
 });
 
 describe("parseBool", () => {
@@ -82,10 +82,10 @@ describe("readSecretFile", () => {
 });
 
 describe("loadConfig", () => {
-  const noEnv: NodeJS.ProcessEnv = {};
+  const noEnvironment: NodeJS.ProcessEnv = {};
 
   it("applies built-in defaults with no overrides or env", () => {
-    const c = loadConfig(opts(), noEnv);
+    const c = loadConfig(options(), noEnvironment);
     expect(c).toEqual<Config>({
       endpoint: "",
       username: "root@pam",
@@ -103,8 +103,8 @@ describe("loadConfig", () => {
 
   it("maps parsed CLI options onto the config", () => {
     const c = loadConfig(
-      opts({ "pbs.endpoint": "https://pbs:8007", "pbs.metricsPath": "/m" }),
-      noEnv,
+      options({ "pbs.endpoint": "https://pbs:8007", "pbs.metricsPath": "/m" }),
+      noEnvironment,
     );
     expect(c.endpoint).toBe("https://pbs:8007");
     expect(c.metricsPath).toBe("/m");
@@ -112,21 +112,26 @@ describe("loadConfig", () => {
 
   it("maps dotted and hyphenated option keys", () => {
     const c = loadConfig(
-      opts({ "pbs.api.token.name": "mytoken", "pbs.listenAddress": ":9999" }),
-      noEnv,
+      options({
+        "pbs.api.token.name": "mytoken",
+        "pbs.listenAddress": ":9999",
+      }),
+      noEnvironment,
     );
     expect(c.apiTokenName).toBe("mytoken");
     expect(c.listenAddress).toBe(":9999");
   });
 
   it("sets showVersion when the --version option is set", () => {
-    expect(loadConfig(opts({ version: true }), noEnv).showVersion).toBe(true);
-    expect(loadConfig(opts(), noEnv).showVersion).toBe(false);
+    expect(
+      loadConfig(options({ version: true }), noEnvironment).showVersion,
+    ).toBe(true);
+    expect(loadConfig(options(), noEnvironment).showVersion).toBe(false);
   });
 
   it("lets environment variables override CLI options", () => {
     const c = loadConfig(
-      opts({ "pbs.metricsPath": "/flag", "pbs.endpoint": "http://flag" }),
+      options({ "pbs.metricsPath": "/flag", "pbs.endpoint": "http://flag" }),
       {
         PBS_METRICS_PATH: "/env",
         PBS_ENDPOINT: "http://env",
@@ -137,7 +142,7 @@ describe("loadConfig", () => {
   });
 
   it("reads secrets from *_FILE env vars when the direct var is unset", () => {
-    const c = loadConfig(opts(), {
+    const c = loadConfig(options(), {
       PBS_API_TOKEN_FILE: secretFile("file-token\nignored"),
       PBS_USERNAME_FILE: secretFile("file-user"),
       PBS_API_TOKEN_NAME_FILE: secretFile("file-token-name"),
@@ -148,7 +153,7 @@ describe("loadConfig", () => {
   });
 
   it("prefers the direct env var over its *_FILE counterpart", () => {
-    const c = loadConfig(opts(), {
+    const c = loadConfig(options(), {
       PBS_API_TOKEN: "direct-token",
       PBS_API_TOKEN_FILE: secretFile("file-token"),
     });
@@ -156,52 +161,53 @@ describe("loadConfig", () => {
   });
 
   it("parses the timeout duration into milliseconds", () => {
-    expect(loadConfig(opts({ "pbs.timeout": "1m30s" }), noEnv).timeout).toBe(
-      90000,
-    );
-    expect(loadConfig(opts(), { PBS_TIMEOUT: "250ms" }).timeout).toBe(250);
+    expect(
+      loadConfig(options({ "pbs.timeout": "1m30s" }), noEnvironment).timeout,
+    ).toBe(90_000);
+    expect(loadConfig(options(), { PBS_TIMEOUT: "250ms" }).timeout).toBe(250);
   });
 
   it("throws on an invalid timeout duration", () => {
-    expect(() => loadConfig(opts(), { PBS_TIMEOUT: "nonsense" })).toThrow(
+    expect(() => loadConfig(options(), { PBS_TIMEOUT: "nonsense" })).toThrow(
       /invalid duration/,
     );
   });
 
   it("reads the log format from the option and env", () => {
-    expect(loadConfig(opts({ "pbs.logformat": "json" }), noEnv).logFormat).toBe(
-      "json",
-    );
-    expect(loadConfig(opts(), { PBS_LOGFORMAT: "json" }).logFormat).toBe(
+    expect(
+      loadConfig(options({ "pbs.logformat": "json" }), noEnvironment).logFormat,
+    ).toBe("json");
+    expect(loadConfig(options(), { PBS_LOGFORMAT: "json" }).logFormat).toBe(
       "json",
     );
     // Env overrides the option.
     expect(
-      loadConfig(opts({ "pbs.logformat": "json" }), { PBS_LOGFORMAT: "text" })
-        .logFormat,
+      loadConfig(options({ "pbs.logformat": "json" }), {
+        PBS_LOGFORMAT: "text",
+      }).logFormat,
     ).toBe("text");
   });
 
   it("throws on an invalid log format", () => {
-    expect(() => loadConfig(opts(), { PBS_LOGFORMAT: "xml" })).toThrow(
+    expect(() => loadConfig(options(), { PBS_LOGFORMAT: "xml" })).toThrow(
       /invalid log format/,
     );
   });
 
   it("validates a configured endpoint scheme (SSRF guard)", () => {
     expect(
-      loadConfig(opts(), { PBS_ENDPOINT: "https://pbs:8007" }).endpoint,
+      loadConfig(options(), { PBS_ENDPOINT: "https://pbs:8007" }).endpoint,
     ).toBe("https://pbs:8007");
     expect(() =>
-      loadConfig(opts(), { PBS_ENDPOINT: "file:///etc/passwd" }),
+      loadConfig(options(), { PBS_ENDPOINT: "file:///etc/passwd" }),
     ).toThrow(/disallowed target URL scheme/);
-    expect(() => loadConfig(opts(), { PBS_ENDPOINT: "not-a-url" })).toThrow(
+    expect(() => loadConfig(options(), { PBS_ENDPOINT: "not-a-url" })).toThrow(
       /invalid target URL/,
     );
   });
 
   it("leaves an empty endpoint unvalidated (dynamic target mode)", () => {
-    expect(loadConfig(opts(), noEnv).endpoint).toBe("");
+    expect(loadConfig(options(), noEnvironment).endpoint).toBe("");
   });
 });
 

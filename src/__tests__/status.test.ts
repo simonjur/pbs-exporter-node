@@ -37,14 +37,14 @@ describe("recordScrape", () => {
       up: true,
       version: "3.2.7",
       release: "3.2.7-1",
-      nowMs: 1719_000_000_000,
+      nowMs: 1_719_000_000_000,
     });
     expect(getStatuses()[0]).toEqual({
       target: "https://pbs:8007",
       up: true,
       version: "3.2.7",
       release: "3.2.7-1",
-      lastScrapeMs: 1719_000_000_000,
+      lastScrapeMs: 1_719_000_000_000,
       error: null,
     });
   });

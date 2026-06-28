@@ -86,11 +86,11 @@ export class Exporter {
     repoId: string;
   } | null = null;
 
-  constructor(opts: ExporterOptions) {
-    this.endpoint = opts.endpoint;
-    this.authorizationHeader = `PBSAPIToken=${opts.username}!${opts.apiTokenName}:${opts.apiToken}`;
-    this.timeoutMs = opts.timeoutMs;
-    this.dispatcher = opts.dispatcher;
+  constructor(options: ExporterOptions) {
+    this.endpoint = options.endpoint;
+    this.authorizationHeader = `PBSAPIToken=${options.username}!${options.apiTokenName}:${options.apiToken}`;
+    this.timeoutMs = options.timeoutMs;
+    this.dispatcher = options.dispatcher;
   }
 
   /** Perform an authenticated GET and return the parsed JSON body. */
@@ -125,9 +125,9 @@ export class Exporter {
         release: this.versionInfo?.release ?? null,
         error: null,
       };
-    } catch (err) {
+    } catch (error) {
       m.up.set(0);
-      const message = err instanceof Error ? err.message : String(err);
+      const message = error instanceof Error ? error.message : String(error);
       log.error(message);
       return {
         up: false,
@@ -186,18 +186,21 @@ export class Exporter {
     }
 
     const data = resp.json().data ?? {};
-    let statusStr = "";
+    let statusString = "";
     let productName = "unknown";
     let dueTs = 0;
 
-    if (data.status != null) statusStr = String(data.status);
-    if (data.productname != null) productName = String(data.productname);
+    if (data.status != undefined) statusString = String(data.status);
+    if (data.productname != undefined) productName = String(data.productname);
     if (typeof data.nextduedate === "string") {
       const parsed = Date.parse(`${data.nextduedate}T00:00:00Z`);
       if (!Number.isNaN(parsed)) dueTs = Math.floor(parsed / 1000);
     }
 
-    m.subscriptionInfo.set({ productname: productName, status: statusStr }, 1);
+    m.subscriptionInfo.set(
+      { productname: productName, status: statusString },
+      1,
+    );
     m.subscriptionDueTimestamp.set({ productname: productName }, dueTs);
 
     const statuses = [
@@ -209,7 +212,7 @@ export class Exporter {
       "suspended",
     ];
     for (const s of statuses) {
-      m.subscriptionStatus.set({ status: s }, statusStr === s ? 1 : 0);
+      m.subscriptionStatus.set({ status: s }, statusString === s ? 1 : 0);
     }
   }
 

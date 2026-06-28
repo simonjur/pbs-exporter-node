@@ -45,7 +45,7 @@ describe("Exporter.collect — healthy server", () => {
   beforeEach(() => {
     // Fixed "now" so snapshot age is deterministic.
     vi.useFakeTimers();
-    vi.setSystemTime(1780900000000);
+    vi.setSystemTime(1_780_900_000_000);
   });
 
   it("reports up and the PBS version", async () => {
@@ -116,9 +116,9 @@ describe("Exporter.collect — healthy server", () => {
     // Latest of the three 503 snapshots.
     expect(
       await metricValue(registry, "pbs_snapshot_vm_last_timestamp", vm503),
-    ).toBe(1780683922);
+    ).toBe(1_780_683_922);
     expect(await metricValue(registry, "pbs_snapshot_vm_last_age", vm503)).toBe(
-      1780900000 - 1780683922,
+      1_780_900_000 - 1_780_683_922,
     );
     expect(
       await metricValue(registry, "pbs_snapshot_vm_last_verify", vm503),

@@ -14,7 +14,7 @@ import type { LogFormat } from "./config.ts";
 
 /** Strip CR/LF to prevent log injection from user-controlled values. */
 export function sanitize(value: string): string {
-  return value.replaceAll("\n", "").replaceAll("\r", "");
+  return value.replaceAll(/[\n\r]/g, "");
 }
 
 // Human-readable: "LEVEL: message".

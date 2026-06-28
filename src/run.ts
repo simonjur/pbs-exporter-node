@@ -47,14 +47,14 @@ program
   .option("--version", "Show version and exit", false)
   .parse();
 
-const opts = program.opts<CliOptions>();
+const options = program.opts<CliOptions>();
 
 let config: Config;
 try {
-  config = loadConfig(opts, process.env);
-} catch (err) {
+  config = loadConfig(options, process.env);
+} catch (error) {
   log.error(
-    `Unable to load configuration: ${err instanceof Error ? err.message : String(err)}`,
+    `Unable to load configuration: ${error instanceof Error ? error.message : String(error)}`,
   );
   process.exit(1);
 }

@@ -19,10 +19,10 @@ export const versionResponse = {
 export const datastoreUsageResponse = {
   data: [
     {
-      avail: 7589931560960,
+      avail: 7_589_931_560_960,
       store: "slow-xfs",
-      total: 7999425155072,
-      used: 409493594112,
+      total: 7_999_425_155_072,
+      used: 409_493_594_112,
       "backend-type": "filesystem",
     },
   ],
@@ -40,27 +40,27 @@ export const snapshotsRootResponse = {
     {
       "backup-type": "ct",
       "backup-id": "503",
-      "backup-time": 1779474301,
+      "backup-time": 1_779_474_301,
       comment: "mail-archover.home.arpa",
     },
     {
       "backup-type": "ct",
       "backup-id": "503",
-      "backup-time": 1780683922,
+      "backup-time": 1_780_683_922,
       comment: "mail-archover.home.arpa",
       verification: { state: "ok" },
     },
     {
       "backup-type": "ct",
       "backup-id": "503",
-      "backup-time": 1780597498,
+      "backup-time": 1_780_597_498,
       comment: "mail-archover.home.arpa",
       verification: { state: "ok" },
     },
     {
       "backup-type": "vm",
       "backup-id": "100",
-      "backup-time": 1780867436,
+      "backup-time": 1_780_867_436,
       comment: "minilab, homelab, 100",
       verification: { state: "failed" },
     },
@@ -72,9 +72,13 @@ export const snapshotsEmptyResponse = { data: [] };
 export const nodeStatusResponse = {
   data: {
     cpu: 0.004284949116229231,
-    memory: { free: 7356518400, total: 8195104768, used: 598495232 },
-    swap: { free: 8191471616, total: 8191471616, used: 0 },
-    root: { avail: 208426250240, total: 224872357888, used: 4948684800 },
+    memory: { free: 7_356_518_400, total: 8_195_104_768, used: 598_495_232 },
+    swap: { free: 8_191_471_616, total: 8_191_471_616, used: 0 },
+    root: {
+      avail: 208_426_250_240,
+      total: 224_872_357_888,
+      used: 4_948_684_800,
+    },
     loadavg: [0.02, 0.03, 0.04],
     uptime: 803,
     wait: 0.5,
@@ -133,7 +137,7 @@ export type FetchCall = { path: string; init?: RequestInit };
  */
 export function makeFetchMock(routes: Routes) {
   const calls: FetchCall[] = [];
-  const fn = async (
+  const function_ = async (
     input: string | URL,
     init?: RequestInit,
   ): Promise<Response> => {
@@ -146,7 +150,7 @@ export function makeFetchMock(routes: Routes) {
       typeof route.body === "string" ? route.body : JSON.stringify(route.body);
     return new Response(body, { status: route.status ?? 200 });
   };
-  return Object.assign(fn, { calls });
+  return Object.assign(function_, { calls });
 }
 
 /**
@@ -162,7 +166,7 @@ export async function metricValue(
   const metric = all.find((m) => m.name === name);
   if (!metric) return undefined;
   const entry = metric.values.find((v) =>
-    Object.entries(labels).every(([k, val]) => String(v.labels[k]) === val),
+    Object.entries(labels).every(([k, value]) => String(v.labels[k]) === value),
   );
   return entry?.value;
 }
