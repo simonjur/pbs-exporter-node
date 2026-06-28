@@ -8,7 +8,7 @@ export default defineConfig({
       reportsDirectory: "./coverage",
       // Measure coverage of the source, not the tests themselves.
       include: ["src/**/*.ts"],
-      exclude: ["src/__tests__/**", "src/main.ts"],
+      exclude: ["src/__tests__/**", "src/run.ts", "src/main.ts"],
       reporter: [
         "text", // console summary
         "html", // human-browsable report at coverage/index.html

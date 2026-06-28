@@ -7,10 +7,10 @@
   "engines": {
     "node": ">=24"
   },
-  "main": "src/main.ts",
+  "main": "src/run.ts",
   "scripts": {
-    "start": "node --env-file=.env src/main.ts",
-    "dev": "node --env-file=.env --watch src/main.ts",
+    "start": "node --env-file=.env src/run.ts",
+    "dev": "node --env-file=.env --watch src/run.ts",
     "lint:ts": "tsc --noEmit",
     "lint:eslint": "eslint \"**/*.ts\" src/web/app.js",
     "lint:prettier": "prettier --check \"**/*.ts\"",

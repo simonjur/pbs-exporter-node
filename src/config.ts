@@ -1,12 +1,13 @@
 /**
- * Configuration loading for the PBS exporter.
+ * Configuration building for the PBS exporter.
  *
  * Resolution precedence (lowest → highest): built-in default → CLI flag → env var.
- * Flags are parsed with commander; environment variables override flags/defaults.
+ * CLI flags are parsed with commander in the entrypoint ([`run.ts`](./run.ts));
+ * this module is pure — it maps the already-parsed options plus the environment
+ * into a {@link Config}, and never touches `process.argv` or commander.
  */
 
 import { readFileSync } from "node:fs";
-import { Command } from "commander";
 import parse from "parse-duration";
 
 export type Config = {
@@ -24,6 +25,25 @@ export type Config = {
 };
 
 export type LogFormat = "text" | "json";
+
+/**
+ * Parsed CLI options as produced by commander's `program.opts()` in `run.ts`.
+ * Keys match the commander option names: the segment after the last hyphen group
+ * is camel-cased (`--pbs.metrics-path` → `pbs.metricsPath`), dots are preserved.
+ */
+export type CliOptions = {
+  "pbs.endpoint": string;
+  "pbs.username": string;
+  "pbs.api.token": string;
+  "pbs.api.token.name": string;
+  "pbs.timeout": string;
+  "pbs.insecure": string;
+  "pbs.metricsPath": string;
+  "pbs.listenAddress": string;
+  "pbs.loglevel": string;
+  "pbs.logformat": string;
+  version?: boolean;
+};
 
 /** Read the first line of a secret file (matches the Go bufio.Scanner behaviour). */
 export function readSecretFile(filename: string): string {
@@ -73,50 +93,18 @@ export function parseBool(input: string): boolean {
 }
 
 /**
- * Build the exporter configuration from CLI flags and environment variables.
+ * Build the exporter configuration from parsed CLI options and the environment.
  *
- * @param argv Full process-style argv (defaults to `process.argv`).
+ * Pure: commander parsing happens in `run.ts`; this only applies the env-var
+ * overrides and validation on top of the supplied {@link CliOptions}.
+ *
+ * @param opts Parsed CLI options (from `program.opts()` in `run.ts`).
  * @param env  Environment map (defaults to `process.env`).
  */
 export function loadConfig(
-  argv: string[] = process.argv,
+  opts: CliOptions,
   env: NodeJS.ProcessEnv = process.env,
 ): Config {
-  const program = new Command();
-  program
-    .name("pbs-exporter")
-    .description("Export Proxmox Backup Server metrics for Prometheus")
-    .option("--pbs.endpoint <endpoint>", "Proxmox Backup Server endpoint", "")
-    .option(
-      "--pbs.username <username>",
-      "Proxmox Backup Server username",
-      "root@pam",
-    )
-    .option("--pbs.api.token <token>", "Proxmox Backup Server API token", "")
-    .option(
-      "--pbs.api.token.name <name>",
-      "Proxmox Backup Server API token name",
-      "pbs-exporter",
-    )
-    .option("--pbs.timeout <duration>", "Proxmox Backup Server timeout", "5s")
-    .option("--pbs.insecure <bool>", "Proxmox Backup Server insecure", "false")
-    .option(
-      "--pbs.metrics-path <path>",
-      "Path under which to expose metrics",
-      "/metrics",
-    )
-    .option(
-      "--pbs.listen-address <address>",
-      "Address on which to expose metrics",
-      ":10019",
-    )
-    .option("--pbs.loglevel <level>", "Loglevel", "info")
-    .option("--pbs.logformat <format>", "Log format (text|json)", "text")
-    .option("--version", "Show version and exit", false)
-    .parse(argv);
-
-  const opts = program.opts();
-
   // Resolve the raw timeout string (default → flag → env), then parse to ms.
   let timeoutRaw: string = opts["pbs.timeout"];
   if (env.PBS_TIMEOUT) timeoutRaw = env.PBS_TIMEOUT;

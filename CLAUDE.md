@@ -32,8 +32,11 @@ Tests live under [`src/__tests__/`](src/__tests__) (mirroring the `src/` layout)
 `*.test.ts` suffix; shared fixtures/helpers sit alongside them (`pbs.fixtures.ts`). See the
 [testing spec](spec/testing.md) (`REQ-TEST-*`) for the authoritative testing conventions.
 
-- [src/main.ts](src/main.ts) — entrypoint only: loads config, wires collaborators,
-  starts the HTTP server. Thin and excluded from coverage.
+- [src/run.ts](src/run.ts) — process entrypoint: the only place using commander
+  (`import { program } from "commander"`), parses CLI flags, calls `loadConfig`, then
+  `main()`. Thin and excluded from coverage.
+- [src/main.ts](src/main.ts) — exports `main(config)`: wires collaborators and starts the
+  HTTP server. Thin and excluded from coverage.
 - [src/exporter.ts](src/exporter.ts) — the `Exporter` PBS API client and per-scrape metric
   collection (timeout + TLS dispatcher injected); unit-tested.
 - [src/__tests__/exporter.test.ts](src/__tests__/exporter.test.ts) — vitest tests driving the exporter with
@@ -55,7 +58,7 @@ Tests live under [`src/__tests__/`](src/__tests__) (mirroring the `src/` layout)
 
 ```bash
 npm install                  # install dependencies
-npm start                    # run the exporter (node --env-file=.env src/main.ts)
+npm start                    # run the exporter (node --env-file=.env src/run.ts)
 npm run dev                  # run with --watch for local development
 npm run lint:ts              # type-check only (tsc --noEmit) — must exit 0
 npm run lint:eslint          # lint all .ts files + src/web/app.js with ESLint 10 — must exit 0
@@ -90,10 +93,12 @@ Coverage reports land in `coverage/`:
 
 ## Configuration
 
-Flags (commander) and environment variables; precedence is default → flag → env.
-See `loadConfig` in [src/config.ts](src/config.ts) and the `REQ-CFG-*` requirements in
-[SPEC.md](SPEC.md) for the authoritative list. Secret values can be supplied via
-`*_FILE` env vars (first line of the file is read).
+Flags and environment variables; precedence is default → flag → env. CLI flags are
+declared and parsed with commander in [src/run.ts](src/run.ts) (the `program` singleton);
+[src/config.ts](src/config.ts) stays pure — `loadConfig(opts, env)` maps the already-parsed
+options plus the environment into a `Config`. See `loadConfig`/`CliOptions` and the
+`REQ-CFG-*` requirements in [SPEC.md](SPEC.md) for the authoritative list. Secret values can
+be supplied via `*_FILE` env vars (first line of the file is read).
 
 ## Security — log injection
 

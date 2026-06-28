@@ -1,12 +1,13 @@
 # PBS Exporter — Specification
 
 > **Spec-driven development.** This document set is the source of truth for what the
-> exporter must do. The implementation — a thin entrypoint [`src/main.ts`](src/main.ts)
-> with logic split across `config.ts`, `exporter.ts` (PBS client), `server.ts` (HTTP
-> layer), `metrics.ts`, `status.ts` and `log.ts` — is verified *against* this spec, not
-> the other way around. Each requirement has a stable ID and a verification method an
-> agent (or human) can execute. When behavior changes, update the spec **first**, then
-> the code, then re-verify.
+> exporter must do. The implementation — a thin entrypoint [`src/run.ts`](src/run.ts)
+> (CLI/commander parsing + bootstrap) calling `main()` in [`src/main.ts`](src/main.ts)
+> (wiring/serving), with logic split across `config.ts`, `exporter.ts` (PBS client),
+> `server.ts` (HTTP layer), `metrics.ts`, `status.ts` and `log.ts` — is verified
+> *against* this spec, not the other way around. Each requirement has a stable ID and a
+> verification method an agent (or human) can execute. When behavior changes, update the
+> spec **first**, then the code, then re-verify.
 
 This file is the index. The requirements themselves live in per-area files under
 [`spec/`](spec/); every `REQ-*` ID is globally unique across those files.
@@ -23,7 +24,7 @@ Build/run baseline:
 ```bash
 npm install
 npm run lint:ts          # MUST exit 0
-PBS_LISTEN_ADDRESS=":19099" node src/main.ts
+PBS_LISTEN_ADDRESS=":19099" node src/run.ts
 ```
 
 Produce a report mapping every `REQ-*` ID to PASS / FAIL / SKIP with the evidence
