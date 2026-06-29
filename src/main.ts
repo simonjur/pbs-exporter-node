@@ -98,7 +98,7 @@ export function main(config: Config): void {
     logger.debug(`Using connection endpoint: ${config.endpoint}`);
     logger.debug(`Using connection username: (hidden)`);
     logger.debug(`Using connection apitoken: (hidden)`);
-    logger.debug(`Using connection apitokenname: ${config.apiTokenName}`);
+    logger.debug(`Using connection apitokenname: (hidden)`);
     logger.debug(`Using connection timeout: ${timeoutMs}ms`);
     logger.debug(`Using connection insecure: ${config.insecure}`);
     logger.debug(`Using metrics path: ${config.metricsPath}`);
