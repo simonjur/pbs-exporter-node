@@ -17,6 +17,8 @@
 
 ---
 
+> 🤖 This project was created with [Claude](https://claude.ai/) (Claude Code).
+
 Export [Proxmox Backup Server](https://www.proxmox.com/en/proxmox-backup-server/overview) statistics to [Prometheus](https://prometheus.io/).
 
 Metrics are retrieved using the [Proxmox Backup Server API](https://pbs.proxmox.com/docs/api-viewer/index.html).
@@ -41,8 +43,7 @@ docker run -p 10019:10019 \
   ghcr.io/simonjur/pbs-exporter-node:alpha
 ```
 
-Or use the provided [docker-compose.yaml](docker-compose.yaml) (see also
-[docker-compose.example.yaml](docker-compose.example.yaml)).
+Or use [docker-compose.example.yaml](docker-compose.example.yaml) as a starting point.
 
 ### From source
 
