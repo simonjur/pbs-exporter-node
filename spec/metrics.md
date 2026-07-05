@@ -31,3 +31,7 @@ All metric names are prefixed `pbs_`. Type is gauge unless noted.
 **Verify [offline-ok]:** every `# HELP pbs_<name>` and `# TYPE` line is present in `/metrics`
 output (names/labels/help match this table exactly) even when `pbs_up 0`, because the
 gauges are declared per scrape. **[needs-pbs]** for populated values.
+
+When `pbs.snapshots.cache` is enabled, the `pbs_snapshot_*` series (REQ-M-6 … REQ-M-10)
+may be populated from a cache after a failed scrape rather than from a live PBS response;
+see `REQ-SCRAPE-6`.

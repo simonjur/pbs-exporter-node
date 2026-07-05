@@ -18,6 +18,11 @@ import { type Config, validateUrl } from "./config.ts";
 import { buildMetrics } from "./metrics.ts";
 import { Exporter } from "./exporter.ts";
 import { getStatuses, getSummary, recordScrape } from "./status.ts";
+import {
+  applyCachedSnapshotMetrics,
+  captureSnapshotMetrics,
+  hasSnapshotCache,
+} from "./snapshotCache.ts";
 import { Version, Commit, BuildTime } from "./buildinfo.ts";
 
 // ---------------------------------------------------------------------------
@@ -143,6 +148,20 @@ export async function handleRequest(
       error: result.error,
       nowMs: Date.now(),
     });
+
+    // Stale-snapshot cache (opt-in): keep serving pbs_snapshot_* metrics while
+    // PBS is offline, so Grafana does not report "No data" for backups that
+    // have not changed. A success refreshes the cache; a failure replays it.
+    if (config.cacheSnapshots) {
+      if (result.up) {
+        await captureSnapshotMetrics(target, metrics);
+      } else if (hasSnapshotCache(target)) {
+        applyCachedSnapshotMetrics(target, metrics, Date.now());
+        log.info(
+          `Target ${target} unreachable; serving cached pbs_snapshot_* metrics`,
+        );
+      }
+    }
 
     // Combine PBS scrape metrics with the persistent Node.js process metrics.
     const merged = Registry.merge([context.defaultRegistry, registry]);

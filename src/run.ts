@@ -33,6 +33,11 @@ program
   .option("--pbs.timeout <duration>", "Proxmox Backup Server timeout", "5s")
   .option("--pbs.insecure <bool>", "Proxmox Backup Server insecure", "false")
   .option(
+    "--pbs.snapshots.cache <bool>",
+    "Serve cached pbs_snapshot_* metrics when a scrape fails (PBS offline)",
+    "false",
+  )
+  .option(
     "--pbs.metrics-path <path>",
     "Path under which to expose metrics",
     "/metrics",

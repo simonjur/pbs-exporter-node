@@ -17,6 +17,12 @@ export type Config = {
   apiTokenName: string;
   timeout: number;
   insecure: boolean;
+  /**
+   * When `true`, serve the last successful scrape's `pbs_snapshot_*` metrics
+   * from an in-memory cache whenever a scrape fails (PBS unreachable). See
+   * {@link ../src/snapshotCache.ts} and `REQ-SCRAPE-6`.
+   */
+  cacheSnapshots: boolean;
   metricsPath: string;
   listenAddress: string;
   loglevel: string;
@@ -38,6 +44,7 @@ export type CliOptions = {
   "pbs.api.token.name": string;
   "pbs.timeout": string;
   "pbs.insecure": string;
+  "pbs.snapshots.cache": string;
   "pbs.metricsPath": string;
   "pbs.listenAddress": string;
   "pbs.loglevel": string;
@@ -77,7 +84,7 @@ export function validateUrl(rawUrl: string): URL {
 }
 
 /** Parse a Go-style boolean string ("1"/"t"/"true" / "0"/"f"/"false"). */
-function isInsecure(input: string): boolean {
+function isTruthyFlag(input: string): boolean {
   switch (input.toLowerCase()) {
     case "1":
     case "t":
@@ -129,7 +136,11 @@ export function loadConfig(
     apiTokenName: options["pbs.api.token.name"],
     timeout,
     // Resolve and parse the insecure flag (default → flag → env) into a boolean.
-    insecure: isInsecure(environment.PBS_INSECURE || options["pbs.insecure"]),
+    insecure: isTruthyFlag(environment.PBS_INSECURE || options["pbs.insecure"]),
+    // Resolve and parse the snapshot-cache flag (default → flag → env).
+    cacheSnapshots: isTruthyFlag(
+      environment.PBS_SNAPSHOTS_CACHE || options["pbs.snapshots.cache"],
+    ),
     metricsPath: options["pbs.metricsPath"],
     listenAddress: options["pbs.listenAddress"],
     loglevel: options["pbs.loglevel"],

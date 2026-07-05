@@ -52,6 +52,7 @@ Tests live under [`src/__tests__/`](src/__tests__) (mirroring the `src/` layout)
 - [src/__tests__/pbs.fixtures.ts](src/__tests__/pbs.fixtures.ts) — mock PBS API responses + test helpers (`makeFetchMock`, `metricValue`).
 - [src/config.ts](src/config.ts) — config loading (flags + env), pure and unit-tested.
 - [src/__tests__/config.test.ts](src/__tests__/config.test.ts) — vitest unit tests for the config module.
+- [src/snapshotCache.ts](src/snapshotCache.ts) — opt-in in-memory per-target cache of the `pbs_snapshot_*` series; re-emits the last successful values on a failed scrape (recomputing `pbs_snapshot_vm_last_age`) so Grafana keeps data while PBS is offline. Gated by `pbs.snapshots.cache` / `PBS_SNAPSHOTS_CACHE`; wired in [src/server.ts](src/server.ts). See `REQ-SCRAPE-6`.
 - [src/status.ts](src/status.ts) — in-memory per-target scrape-status store powering the UI; unit-tested.
 - [src/__tests__/status.test.ts](src/__tests__/status.test.ts) — vitest unit tests for the status store.
 - [src/web/](src/web) — status UI sources: `index.html` shell + `app.js` (Vue 3 + Vuetify 3).

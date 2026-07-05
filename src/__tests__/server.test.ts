@@ -22,6 +22,7 @@ import {
 } from "../server.ts";
 import type { Config } from "../config.ts";
 import { getStatuses, resetStatuses } from "../status.ts";
+import { resetSnapshotCache } from "../snapshotCache.ts";
 import {
   healthyRoutes,
   makeFetchMock,
@@ -68,6 +69,7 @@ function baseConfig(overrides: Partial<Config> = {}): Config {
     apiTokenName: "pbs-exporter",
     timeout: 5000,
     insecure: true,
+    cacheSnapshots: false,
     metricsPath: "/metrics",
     listenAddress: ":10019",
     loglevel: "info",
@@ -89,7 +91,9 @@ function context(config: Config): RequestContext {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   resetStatuses();
+  resetSnapshotCache();
 });
 
 describe("handleRequest — /metrics", () => {
@@ -188,6 +192,88 @@ describe("handleRequest — /metrics", () => {
     );
 
     expect(String(response.body)).toContain("pbs_up 1");
+  });
+});
+
+// A route table whose version endpoint fails, i.e. an offline PBS.
+function offlineRoutes(): Routes {
+  const routes = healthyRoutes();
+  routes["/api2/json/version"] = { status: 503, body: "unavailable" };
+  return routes;
+}
+
+describe("handleRequest — /metrics stale snapshot cache", () => {
+  it("re-emits cached pbs_snapshot_* metrics on a failed scrape when enabled", async () => {
+    vi.useFakeTimers();
+    const config = context(baseConfig({ cacheSnapshots: true }));
+
+    // 1) A healthy scrape populates the cache.
+    vi.setSystemTime(1_780_900_000_000);
+    installFetch(healthyRoutes());
+    await handleRequest(mockRequest("/metrics"), mockResponse(), config);
+    vi.unstubAllGlobals();
+
+    // 2) A later failed scrape re-emits the cached snapshot series; age grows.
+    vi.setSystemTime(1_781_000_000_000);
+    installFetch(offlineRoutes());
+    const response = mockResponse();
+    await handleRequest(mockRequest("/metrics"), response, config);
+
+    const body = String(response.body);
+    expect(body).toContain("pbs_up 0");
+    // Cached snapshot series persist while PBS is offline.
+    expect(body).toMatch(
+      /pbs_snapshot_count\{datastore="slow-xfs",namespace=""\} 4/,
+    );
+    expect(body).toContain("pbs_snapshot_vm_last_timestamp{");
+    expect(body).toMatch(/vm_id="503"[^\n]*\} 1780683922/);
+    // Age recomputed against the (advanced) current time, not the cached one.
+    expect(body).toMatch(
+      /pbs_snapshot_vm_last_age\{[^\n]*vm_id="503"[^\n]*\} 316078/,
+    );
+  });
+
+  it("does not emit cached snapshot metrics on failure when disabled", async () => {
+    const config = context(baseConfig({ cacheSnapshots: false }));
+
+    installFetch(healthyRoutes());
+    await handleRequest(mockRequest("/metrics"), mockResponse(), config);
+    vi.unstubAllGlobals();
+
+    installFetch(offlineRoutes());
+    const response = mockResponse();
+    await handleRequest(mockRequest("/metrics"), response, config);
+
+    const body = String(response.body);
+    expect(body).toContain("pbs_up 0");
+    // No snapshot series (only the HELP/TYPE header lines) survive.
+    expect(body).not.toMatch(/pbs_snapshot_count\{/);
+  });
+
+  it("caches per target so a different target is unaffected", async () => {
+    const config = context(baseConfig({ endpoint: "", cacheSnapshots: true }));
+
+    // Populate the cache for target A.
+    installFetch(healthyRoutes());
+    await handleRequest(
+      mockRequest("/metrics?target=https://a:8007"),
+      mockResponse(),
+      config,
+    );
+    vi.unstubAllGlobals();
+
+    // Target B has never succeeded, so a failure yields no cached series.
+    installFetch(offlineRoutes());
+    const response = mockResponse();
+    await handleRequest(
+      mockRequest("/metrics?target=https://b:8007"),
+      response,
+      config,
+    );
+
+    const body = String(response.body);
+    expect(body).toContain("pbs_up 0");
+    expect(body).not.toMatch(/pbs_snapshot_count\{/);
   });
 });
 

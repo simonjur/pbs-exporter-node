@@ -22,6 +22,7 @@ function options(overrides: Partial<CliOptions> = {}): CliOptions {
     "pbs.api.token.name": "pbs-exporter",
     "pbs.timeout": "5s",
     "pbs.insecure": "false",
+    "pbs.snapshots.cache": "false",
     "pbs.metricsPath": "/metrics",
     "pbs.listenAddress": ":10019",
     "pbs.loglevel": "info",
@@ -75,6 +76,7 @@ describe("loadConfig", () => {
       apiTokenName: "pbs-exporter",
       timeout: 5000,
       insecure: false,
+      cacheSnapshots: false,
       metricsPath: "/metrics",
       listenAddress: ":10019",
       loglevel: "info",
@@ -187,6 +189,23 @@ describe("loadConfig", () => {
   it("throws on an invalid insecure value", () => {
     expect(() =>
       loadConfig(options({ "pbs.insecure": "maybe" }), noEnvironment),
+    ).toThrow(/invalid boolean/);
+  });
+
+  it("parses the snapshots cache flag into a boolean (option and env)", () => {
+    expect(loadConfig(options(), noEnvironment).cacheSnapshots).toBe(false);
+    expect(
+      loadConfig(options({ "pbs.snapshots.cache": "true" }), noEnvironment)
+        .cacheSnapshots,
+    ).toBe(true);
+    expect(
+      loadConfig(options(), { PBS_SNAPSHOTS_CACHE: "1" }).cacheSnapshots,
+    ).toBe(true);
+  });
+
+  it("throws on an invalid snapshots cache value", () => {
+    expect(() =>
+      loadConfig(options({ "pbs.snapshots.cache": "maybe" }), noEnvironment),
     ).toThrow(/invalid boolean/);
   });
 

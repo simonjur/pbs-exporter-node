@@ -111,8 +111,32 @@ You can use the following flags to configure the exporter. All flags can also be
 | `pbs.username`       | `PBS_USERNAME`       | Username to use for authentication                   | `root@pam`                                             |
 | `pbs.timeout`        | `PBS_TIMEOUT`        | Timeout for requests to Proxmox Backup Server        | `5s`                                                   |
 | `pbs.insecure`       | `PBS_INSECURE`       | Disable TLS certificate verification                 | `false`                                                |
+| `pbs.snapshots.cache`| `PBS_SNAPSHOTS_CACHE`| Serve cached `pbs_snapshot_*` metrics when a scrape fails (PBS offline) | `false`                              |
 | `pbs.metrics-path`   | `PBS_METRICS_PATH`   | Path under which to expose metrics                   | `/metrics`                                             |
 | `pbs.listen-address` | `PBS_LISTEN_ADDRESS` | Address to listen on for web interface and telemetry | `:10019`                                               |
+
+### Serving stale snapshot metrics while PBS is offline
+
+Some Proxmox Backup Servers are only powered on during a backup window (for
+example a homelab that boots at 09:00, runs its backups, and shuts down at
+12:00). While the server is off every scrape fails, so the `pbs_snapshot_*`
+series disappear and Grafana panels for backup age/count show **"No data"** —
+even though the backups themselves have not changed.
+
+Enable `pbs.snapshots.cache` (`PBS_SNAPSHOTS_CACHE=true`) to keep serving the
+last known `pbs_snapshot_*` values while the target is unreachable:
+
+- After each **successful** scrape the exporter caches, per target, the
+  `pbs_snapshot_count`, `pbs_snapshot_vm_count`, `pbs_snapshot_vm_last_timestamp`
+  and `pbs_snapshot_vm_last_verify` series.
+- On a **failed** scrape those cached series are re-emitted, and
+  `pbs_snapshot_vm_last_age` is recomputed as `now - pbs_snapshot_vm_last_timestamp`
+  so it keeps counting up while PBS is down.
+- Everything else is unchanged: `pbs_up` is still `0`, the failure is still
+  logged, and the host/datastore/subscription metrics are not cached.
+
+The cache is in memory only (lost on restart) and is populated by the first
+successful scrape after startup.
 
 ### Running on PBS (systemd)
 
