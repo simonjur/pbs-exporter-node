@@ -103,7 +103,7 @@ You can use the following flags to configure the exporter. All flags can also be
 
 | Flag                 | Environment Variable | Description                                          | Default                                                |
 | -------------------- | -------------------- | ---------------------------------------------------- | ------------------------------------------------------ |
-| `pbs.loglevel`       | `PBS_LOGLEVEL`       | Log level (`debug`, `info`, …)                       | `info`                                                 |
+| `pbs.loglevel`       | `PBS_LOGLEVEL`       | Log level — one of `error`, `warn`, `info`, `http`, `verbose`, `debug`, `silly` ([winston npm levels](https://github.com/winstonjs/winston#logging-levels)) | `info`                                                 |
 | `pbs.logformat`      | `PBS_LOGFORMAT`      | Log output format (`text`, `json`)                   | `text`                                                 |
 | `pbs.api.token`      | `PBS_API_TOKEN`      | API token to use for authentication                  |                                                        |
 | `pbs.api.token.name` | `PBS_API_TOKEN_NAME` | Name of the API token to use for authentication      | `pbs-exporter`                                         |

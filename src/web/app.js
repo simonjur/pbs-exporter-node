@@ -183,14 +183,22 @@ const App = {
           </tbody>
         </v-table>
       </v-card>
-
-      <div class="text-caption text-medium-emphasis mt-4">
-        <a href="/metrics">/metrics</a> &middot;
-        exporter {{ exporter.version }} (commit {{ exporter.commit }}) &middot;
-        updated {{ relativeTime(lastUpdated) }}
-      </div>
     </v-container>
   </v-main>
+
+  <v-footer color="grey-lighten-3" class="text-caption text-medium-emphasis d-flex flex-wrap justify-center ga-2 py-3">
+    <a href="/metrics">/metrics</a>
+    <span>&middot;</span>
+    <span>exporter {{ exporter.version }}</span>
+    <span>&middot;</span>
+    <span>commit {{ exporter.commit }}</span>
+    <template v-if="exporter.buildTime && exporter.buildTime !== 'unknown'">
+      <span>&middot;</span>
+      <span>built {{ exporter.buildTime }}</span>
+    </template>
+    <span>&middot;</span>
+    <span>updated {{ relativeTime(lastUpdated) }}</span>
+  </v-footer>
 </v-app>`,
 };
 
