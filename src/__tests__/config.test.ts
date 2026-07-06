@@ -1,14 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import {
-  type CliOptions,
-  type Config,
-  loadConfig,
-  readSecretFile,
-  validateUrl,
-} from "../config.ts";
+import { describe, expect, it } from "vitest";
+import { type CliOptions, type Config, loadConfig } from "../config.ts";
 
 /**
  * Build a parsed-options object as commander would produce it (defaults applied),
@@ -32,38 +23,10 @@ function options(overrides: Partial<CliOptions> = {}): CliOptions {
   };
 }
 
-// Temp files created during tests, cleaned up afterwards.
-const temporaryFiles: string[] = [];
-function secretFile(contents: string): string {
-  const directory = mkdtempSync(path.join(tmpdir(), "pbs-exporter-test-"));
-  const filePath = path.join(directory, "secret");
-  writeFileSync(filePath, contents);
-  temporaryFiles.push(directory);
-  return filePath;
-}
-
-afterEach(() => {
-  while (temporaryFiles.length > 0) {
-    rmSync(temporaryFiles.pop()!, { recursive: true, force: true });
-  }
-});
-
-describe("readSecretFile", () => {
-  it("returns only the first line", () => {
-    expect(readSecretFile(secretFile("topsecret\nsecondline\n"))).toBe(
-      "topsecret",
-    );
-  });
-
-  it("handles a file without a trailing newline", () => {
-    expect(readSecretFile(secretFile("just-one-line"))).toBe("just-one-line");
-  });
-
-  it("handles CRLF line endings", () => {
-    expect(readSecretFile(secretFile("windows\r\nline"))).toBe("windows");
-  });
-});
-
+// `loadConfig` is the option/env plumbing: it resolves the precedence into raw
+// values and hands them to the zod schema. Field-level validation and coercion
+// are covered by `configSchema.test.ts`; these tests focus on mapping,
+// precedence, and error aggregation.
 describe("loadConfig", () => {
   const noEnvironment: NodeJS.ProcessEnv = {};
 
@@ -113,143 +76,46 @@ describe("loadConfig", () => {
     expect(loadConfig(options(), noEnvironment).showVersion).toBe(false);
   });
 
-  it("lets environment variables override CLI options", () => {
-    const c = loadConfig(
-      options({ "pbs.metricsPath": "/flag", "pbs.endpoint": "http://flag" }),
-      {
+  it("resolves precedence default < flag < env for the same key", () => {
+    // default only
+    expect(loadConfig(options(), noEnvironment).metricsPath).toBe("/metrics");
+    // flag overrides default
+    expect(
+      loadConfig(options({ "pbs.metricsPath": "/flag" }), noEnvironment)
+        .metricsPath,
+    ).toBe("/flag");
+    // env overrides flag
+    expect(
+      loadConfig(options({ "pbs.metricsPath": "/flag" }), {
         PBS_METRICS_PATH: "/env",
-        PBS_ENDPOINT: "http://env",
-      },
-    );
-    expect(c.metricsPath).toBe("/env");
-    expect(c.endpoint).toBe("http://env");
+      }).metricsPath,
+    ).toBe("/env");
   });
 
-  it("reads secrets from *_FILE env vars when the direct var is unset", () => {
-    const c = loadConfig(options(), {
-      PBS_API_TOKEN_FILE: secretFile("file-token\nignored"),
-      PBS_USERNAME_FILE: secretFile("file-user"),
-      PBS_API_TOKEN_NAME_FILE: secretFile("file-token-name"),
+  it("treats an empty env var as unset (falls back to the flag)", () => {
+    const c = loadConfig(options({ "pbs.metricsPath": "/flag" }), {
+      PBS_METRICS_PATH: "",
     });
-    expect(c.apiToken).toBe("file-token");
-    expect(c.username).toBe("file-user");
-    expect(c.apiTokenName).toBe("file-token-name");
+    expect(c.metricsPath).toBe("/flag");
   });
 
-  it("prefers the direct env var over its *_FILE counterpart", () => {
+  it("reads secrets straight from their env vars", () => {
     const c = loadConfig(options(), {
-      PBS_API_TOKEN: "direct-token",
-      PBS_API_TOKEN_FILE: secretFile("file-token"),
+      PBS_API_TOKEN: "the-token",
+      PBS_USERNAME: "svc@pbs",
+      PBS_API_TOKEN_NAME: "the-name",
     });
-    expect(c.apiToken).toBe("direct-token");
+    expect(c.apiToken).toBe("the-token");
+    expect(c.username).toBe("svc@pbs");
+    expect(c.apiTokenName).toBe("the-name");
   });
 
-  it("parses the timeout duration into milliseconds", () => {
-    expect(
-      loadConfig(options({ "pbs.timeout": "1m30s" }), noEnvironment).timeout,
-    ).toBe(90_000);
-    expect(loadConfig(options(), { PBS_TIMEOUT: "250ms" }).timeout).toBe(250);
-  });
-
-  it("throws on an invalid timeout duration", () => {
-    expect(() => loadConfig(options(), { PBS_TIMEOUT: "nonsense" })).toThrow(
-      /invalid duration/,
-    );
-  });
-
-  it("reads the log format from the option and env", () => {
-    expect(
-      loadConfig(options({ "pbs.logformat": "json" }), noEnvironment).logFormat,
-    ).toBe("json");
-    expect(loadConfig(options(), { PBS_LOGFORMAT: "json" }).logFormat).toBe(
-      "json",
-    );
-    // Env overrides the option.
-    expect(
-      loadConfig(options({ "pbs.logformat": "json" }), {
-        PBS_LOGFORMAT: "text",
-      }).logFormat,
-    ).toBe("text");
-  });
-
-  it("throws on an invalid log format", () => {
-    expect(() => loadConfig(options(), { PBS_LOGFORMAT: "xml" })).toThrow(
-      /invalid log format/,
-    );
-  });
-
-  it("parses insecure into a boolean (option and env)", () => {
-    expect(loadConfig(options(), noEnvironment).insecure).toBe(false);
-    expect(
-      loadConfig(options({ "pbs.insecure": "true" }), noEnvironment).insecure,
-    ).toBe(true);
-    expect(loadConfig(options(), { PBS_INSECURE: "1" }).insecure).toBe(true);
-  });
-
-  it("throws on an invalid insecure value", () => {
+  it("reports every offending field in one error", () => {
     expect(() =>
-      loadConfig(options({ "pbs.insecure": "maybe" }), noEnvironment),
-    ).toThrow(/invalid boolean/);
+      loadConfig(options({ "pbs.insecure": "maybe" }), {
+        PBS_TIMEOUT: "nope",
+        PBS_LOGFORMAT: "xml",
+      }),
+    ).toThrow(/invalid configuration/);
   });
-
-  it("parses the snapshots cache flag into a boolean (option and env)", () => {
-    expect(loadConfig(options(), noEnvironment).cacheSnapshots).toBe(false);
-    expect(
-      loadConfig(options({ "pbs.snapshots.cache": "true" }), noEnvironment)
-        .cacheSnapshots,
-    ).toBe(true);
-    expect(
-      loadConfig(options(), { PBS_SNAPSHOTS_CACHE: "1" }).cacheSnapshots,
-    ).toBe(true);
-  });
-
-  it("throws on an invalid snapshots cache value", () => {
-    expect(() =>
-      loadConfig(options({ "pbs.snapshots.cache": "maybe" }), noEnvironment),
-    ).toThrow(/invalid boolean/);
-  });
-
-  it("validates a configured endpoint scheme (SSRF guard)", () => {
-    expect(
-      loadConfig(options(), { PBS_ENDPOINT: "https://pbs:8007" }).endpoint,
-    ).toBe("https://pbs:8007");
-    expect(() =>
-      loadConfig(options(), { PBS_ENDPOINT: "file:///etc/passwd" }),
-    ).toThrow(/disallowed target URL scheme/);
-    expect(() => loadConfig(options(), { PBS_ENDPOINT: "not-a-url" })).toThrow(
-      /invalid target URL/,
-    );
-  });
-
-  it("leaves an empty endpoint unvalidated (dynamic target mode)", () => {
-    expect(loadConfig(options(), noEnvironment).endpoint).toBe("");
-  });
-});
-
-describe("validateUrl", () => {
-  it.each([
-    "http://localhost:8007",
-    "https://192.168.1.164:8007",
-    "https://pbs.example.com",
-  ])("accepts http(s) URL %j and returns a URL", (url) => {
-    const result = validateUrl(url);
-    expect(result).toBeInstanceOf(URL);
-    expect(result.href).toBe(new URL(url).href);
-  });
-
-  it.each([
-    "file:///etc/passwd",
-    "gopher://x",
-    "ftp://h/f",
-    "data:text/plain,x",
-  ])("rejects disallowed scheme %j", (url) => {
-    expect(() => validateUrl(url)).toThrow(/disallowed target URL scheme/);
-  });
-
-  it.each(["", "not-a-url", "//no-scheme"])(
-    "rejects unparseable URL %j",
-    (url) => {
-      expect(() => validateUrl(url)).toThrow(/invalid target URL/);
-    },
-  );
 });

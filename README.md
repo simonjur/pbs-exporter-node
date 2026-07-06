@@ -99,7 +99,15 @@ the build version and exit.
 $ node src/run.ts --help
 ```
 
-You can use the following flags to configure the exporter. All flags can also be set using environment variables. Environment variables take precedence over flags.
+You can use the following flags to configure the exporter. All flags can also be set using environment variables.
+
+**Precedence (lowest → highest): built-in default → CLI flag → environment variable.** For each setting the highest source that is set wins:
+
+1. the built-in **default** applies when nothing else is set;
+2. a **`--pbs.*` flag** overrides the default;
+3. the matching **`PBS_*` environment variable** overrides *both* the flag and the default.
+
+For example, with `PBS_LOGLEVEL=info` set and `--pbs.loglevel=debug` passed, the effective level is `info` (the env var wins). An empty environment variable (e.g. `PBS_LOGLEVEL=`) is treated as unset and falls back to the flag. All values are validated at startup; an invalid value aborts with a single error listing every offending field.
 
 | Flag                 | Environment Variable | Description                                          | Default                                                |
 | -------------------- | -------------------- | ---------------------------------------------------- | ------------------------------------------------------ |
@@ -173,20 +181,6 @@ systemctl start prometheus-pbs-exporter.service
 
 The unit runs `node /opt/pbs-exporter/src/run.ts`; configure the exporter through
 `/etc/pbs-exporter.env` using the environment variables from the table above.
-
-### Docker secrets
-
-If you are using [Docker secrets](https://docs.docker.com/engine/swarm/secrets/), you can use the following environment variables to set the path to the secrets:
-
-| Environment Variable      | Description                     |
-| ------------------------- | ------------------------------- |
-| `PBS_API_TOKEN_FILE`      | Path to the API token file      |
-| `PBS_API_TOKEN_NAME_FILE` | Path to the API token name file |
-| `PBS_USERNAME_FILE`       | Path to the username file       |
-
-Each `*_FILE` variable points at a file whose **first line** is read as the value. The
-direct variables `PBS_API_TOKEN`, `PBS_API_TOKEN_NAME`, and `PBS_USERNAME` take
-precedence over their `*_FILE` counterparts.
 
 ## Multiple Proxmox Backup Servers
 
