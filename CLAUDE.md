@@ -50,8 +50,12 @@ Tests live under [`src/__tests__/`](src/__tests__) (mirroring the `src/` layout)
 - [src/log.ts](src/log.ts) — exports a single `createLogger(level, format)` factory returning a winston logger with selectable output (`text` → `LEVEL: message`, `json` → one JSON object per line). CR/LF stripping (log-injection guard) is applied internally as a winston format, so callers never sanitize manually.
 - [src/buildinfo.ts](src/buildinfo.ts) — build metadata (version/commit/build time).
 - [src/__tests__/pbs.fixtures.ts](src/__tests__/pbs.fixtures.ts) — mock PBS API responses + test helpers (`makeFetchMock`, `metricValue`).
-- [src/config.ts](src/config.ts) — config loading (flags + env), pure and unit-tested.
-- [src/__tests__/config.test.ts](src/__tests__/config.test.ts) — vitest unit tests for the config module.
+- [src/config.ts](src/config.ts) — config loading (flags + env): resolves the default → flag → env precedence into raw strings, then validates/coerces via the zod schema and returns a fully-typed `Config`. Pure and unit-tested.
+- [src/configSchema.ts](src/configSchema.ts) — the zod configuration schema (`configSchema`) and the derived `Config` type. `Config` is `z.infer<typeof configSchema>` so the type follows the schema.
+- [src/url.ts](src/url.ts) — `validateUrl` (the SSRF guard): shared by the config schema, the per-request `?target=` check in `server.ts`, and the fetch-boundary re-validation in `exporter.ts`.
+- [src/__tests__/config.test.ts](src/__tests__/config.test.ts) — vitest unit tests for `config.ts` (`loadConfig`): mapping, precedence, error aggregation.
+- [src/__tests__/configSchema.test.ts](src/__tests__/configSchema.test.ts) — vitest unit tests for `configSchema.ts`: per-field validation/coercion.
+- [src/__tests__/url.test.ts](src/__tests__/url.test.ts) — vitest unit tests for `validateUrl`.
 - [src/snapshotCache.ts](src/snapshotCache.ts) — opt-in in-memory per-target cache of the `pbs_snapshot_*` series; re-emits the last successful values on a failed scrape (recomputing `pbs_snapshot_vm_last_age`) so Grafana keeps data while PBS is offline. Gated by `pbs.snapshots.cache` / `PBS_SNAPSHOTS_CACHE`; wired in [src/server.ts](src/server.ts). See `REQ-SCRAPE-6`.
 - [src/status.ts](src/status.ts) — in-memory per-target scrape-status store powering the UI; unit-tested.
 - [src/__tests__/status.test.ts](src/__tests__/status.test.ts) — vitest unit tests for the status store.
@@ -100,12 +104,16 @@ Coverage reports land in `coverage/`:
 
 ## Configuration
 
-Flags and environment variables; precedence is default → flag → env. CLI flags are
-declared and parsed with commander in [src/run.ts](src/run.ts) (the `program` singleton);
-[src/config.ts](src/config.ts) stays pure — `loadConfig(opts, env)` maps the already-parsed
-options plus the environment into a `Config`. See `loadConfig`/`CliOptions` and the
-`REQ-CFG-*` requirements in [SPEC.md](SPEC.md) for the authoritative list. Secret values can
-be supplied via `*_FILE` env vars (first line of the file is read).
+Flags and environment variables; precedence is **default → flag → env** (the `PBS_*`
+env var, when set to a non-empty value, wins over the `--pbs.*` flag, which wins over
+the default). CLI flags are declared and parsed with commander in [src/run.ts](src/run.ts)
+(the `program` singleton); [src/config.ts](src/config.ts) stays pure — `loadConfig(opts, env)`
+resolves the precedence into a record of raw strings and validates/coerces it through the
+zod schema in [src/configSchema.ts](src/configSchema.ts), returning a fully-typed `Config`.
+Invalid values throw a single error naming every offending field. See `loadConfig`/`CliOptions`,
+the `configSchema`, and the `REQ-CFG-*` requirements in [SPEC.md](SPEC.md) for the
+authoritative list. (There is no `*_FILE` secret-file support — supply secrets directly via
+the `PBS_*` env vars, e.g. Docker/systemd env injection.)
 
 ## Security — log injection
 
@@ -118,7 +126,7 @@ per-call sanitize helper.
 ## Security — SSRF (target validation)
 
 The endpoint/`?target=` URL is attacker-influenceable, so it is validated with
-`validateUrl()` in [src/config.ts](src/config.ts) before any HTTP request: it must be a
+`validateUrl()` in [src/url.ts](src/url.ts) before any HTTP request: it must be a
 parseable absolute URL with an `http:`/`https:` scheme (rejects `file:`, `gopher:`,
 etc.), and it returns a parsed `URL` object. A configured `endpoint` is validated at load
 (fatal on failure); a `?target=` is validated per-request in [src/server.ts](src/server.ts)

@@ -9,7 +9,7 @@
 
 import type { Dispatcher } from "undici";
 import type { Logger } from "winston";
-import { validateUrl } from "./config.ts";
+import { validateUrl } from "./url.ts";
 import type { Metrics } from "./metrics.ts";
 
 const VERSION_API = "/api2/json/version";

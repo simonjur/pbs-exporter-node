@@ -11,7 +11,7 @@
  */
 
 import winston from "winston";
-import type { LogFormat } from "./config.ts";
+import type { Config } from "./config.ts";
 
 // Strip CR/LF from every message to prevent log injection from user-controlled
 // values (resolved targets, error text, …). Applied to both output formats.
@@ -38,7 +38,10 @@ const jsonFormat = winston.format.combine(
 );
 
 /** Create a winston logger at the given level and output format. */
-export function createLogger(level: string, format: LogFormat): winston.Logger {
+export function createLogger(
+  level: string,
+  format: Config["logFormat"],
+): winston.Logger {
   return winston.createLogger({
     level,
     levels: winston.config.npm.levels,
