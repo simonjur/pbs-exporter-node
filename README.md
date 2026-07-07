@@ -24,7 +24,7 @@ Export [Proxmox Backup Server](https://www.proxmox.com/en/proxmox-backup-server/
 Metrics are retrieved using the [Proxmox Backup Server API](https://pbs.proxmox.com/docs/api-viewer/index.html).
 
 > **Note:** This is a **Node.js (>= 24) / TypeScript** application — a rewrite of the
-> original Go exporter. It runs directly from TypeScript via Node's native type
+> [original Go exporter](https://github.com/simonjur/pbs-exporter). It runs directly from TypeScript via Node's native type
 > stripping, so there is **no compile step** for the exporter itself. A small status
 > dashboard is served at `/` (the Prometheus metrics stay on the configured metrics
 > path); its assets are built into `public/` with `npm run build:fe`.
