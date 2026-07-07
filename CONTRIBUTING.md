@@ -34,35 +34,4 @@ If a major new feature is added, there should be new tests for it. If there are 
 
 ### Versioning
 
-Versions follow [Semantic Versioning](https://semver.org/) terminology and are expressed as `x.y.z`:
-
-- where `x` is the major version
-- `y` is the minor version
-- and `z` is the patch version
-
-## Code convention
-
-## Pre-Commit
-
-Please install [pre-commit](https://pre-commit.com/) to enforce some pre-commit checks.
-After cloning the repository, you will need to install the hook script manually:
-
-```bash
-pre-commit install
-```
-
-## golint
-
-We will check the code against [golangci-lint](https://github.com/golangci/golangci-lint) to enforce some code conventions. It runs in the CI pipeline and in pre-commit. You can also run it manually:
-
-```bash
-golangci-lint run
-```
-
-## goimports
-
-We have a pre-commit hook that runs goimports to update the Go import lines, adding missing ones and removing unreferenced ones. You can install it with:
-
-```bash
-go install golang.org/x/tools/cmd/goimports@latest
-```
+For now this repo does not have a formal versioning policy.
