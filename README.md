@@ -61,6 +61,17 @@ node src/run.ts --pbs.endpoint https://your-pbs:8007
 Run `node src/run.ts --help` to see all flags, or `node src/run.ts --version` to print
 the build version and exit.
 
+## Status page
+
+The exporter serves a small status dashboard at `/` (the Prometheus metrics stay on the
+configured metrics path, `/metrics` by default). It shows a per-target up/down summary, each
+target's PBS version and last-scrape time (and the error for a failed scrape), plus a footer
+with the exporter version and the commit the build came from. It's a self-contained Vue 3 +
+Vuetify 3 page with no external/CDN assets (works air-gapped), built into `public/` by
+`npm run build:fe`.
+
+![PBS Exporter status page](docs/status-page.png)
+
 ## Exported Metrics
 
 | Metric                                      | Meaning                                                               | Labels                                                                       |
