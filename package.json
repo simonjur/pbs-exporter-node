@@ -17,6 +17,7 @@
     "format": "prettier --write \"**/*.ts\"",
     "tests:unit": "vitest run",
     "tests:unit:coverage": "vitest run --coverage",
+    "tests:e2e": "playwright test",
     "build:fe": "node scripts/build-fe.mjs",
     "build": "tsc"
   },
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
     "@tsconfig/node-ts": "^23.6.4",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.0.0",
