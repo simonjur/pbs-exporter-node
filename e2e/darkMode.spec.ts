@@ -15,7 +15,7 @@ const STORAGE_KEY = "pbs-exporter-theme";
  * ("Switch to dark mode" in light, "Switch to light mode" in dark), so match
  * either — the pattern is still unique among the app-bar buttons.
  */
-const toggle = (page: Page) =>
+    const toggle = (page: Page) =>
   page.getByRole("button", { name: /switch to (dark|light) mode/i });
 
 /** The Vuetify application root, whose class carries the active theme. */
