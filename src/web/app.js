@@ -121,7 +121,8 @@ const App = {
       <v-btn
         variant="text"
         :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-        aria-label="Toggle dark mode"
+        :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+        :aria-pressed="isDark"
         @click="toggleTheme"
       >{{ isDark ? "☀" : "☾" }}</v-btn>
       <v-btn variant="text" :loading="loading" @click="load">Refresh</v-btn>
