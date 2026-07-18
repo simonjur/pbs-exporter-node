@@ -4,12 +4,30 @@
 // `Vue` and `Vuetify` UMD builds vendored from node_modules.
 
 const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
-const { createVuetify } = Vuetify;
+const { createVuetify, useTheme } = Vuetify;
 
 const REFRESH_MS = 15000;
+const THEME_KEY = "pbs-exporter-theme";
+
+// Resolve the initial theme: stored preference wins, otherwise follow the OS.
+function initialTheme() {
+  const stored = localStorage.getItem(THEME_KEY);
+  if (stored === "light" || stored === "dark") {return stored;}
+  const prefersDark =
+    window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return prefersDark ? "dark" : "light";
+}
 
 const App = {
   setup() {
+    const theme = useTheme();
+    const isDark = computed(() => theme.global.name.value === "dark");
+    function toggleTheme() {
+      const next = isDark.value ? "light" : "dark";
+      theme.global.name.value = next;
+      localStorage.setItem(THEME_KEY, next);
+    }
+
     const exporter = ref({ version: "", commit: "", buildTime: "" });
     const summary = ref({ total: 0, up: 0, down: 0, pending: 0 });
     const targets = ref([]);
@@ -85,6 +103,8 @@ const App = {
       error,
       lastUpdated,
       hasPending,
+      isDark,
+      toggleTheme,
       load,
       relativeTime,
       absoluteTime,
@@ -98,11 +118,18 @@ const App = {
     <v-app-bar-title>Proxmox Backup Server Exporter</v-app-bar-title>
     <template #append>
       <span class="text-caption mr-4 d-none d-sm-inline">{{ exporter.version }}</span>
+      <v-btn
+        variant="text"
+        :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+        :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+        :aria-pressed="isDark"
+        @click="toggleTheme"
+      >{{ isDark ? "☀" : "☾" }}</v-btn>
       <v-btn variant="text" :loading="loading" @click="load">Refresh</v-btn>
     </template>
   </v-app-bar>
 
-  <v-main class="bg-grey-lighten-4">
+  <v-main>
     <v-container>
       <v-alert v-if="error" type="error" :icon="false" variant="tonal" class="mb-4">
         Failed to load status: {{ error }}
@@ -186,7 +213,7 @@ const App = {
     </v-container>
   </v-main>
 
-  <v-footer color="grey-lighten-3" class="text-caption text-medium-emphasis d-flex flex-wrap justify-center ga-2 py-3">
+  <v-footer class="text-caption text-medium-emphasis d-flex flex-wrap justify-center ga-2 py-3">
     <a href="/metrics">/metrics</a>
     <span>&middot;</span>
     <span>exporter {{ exporter.version }}</span>
@@ -203,5 +230,5 @@ const App = {
 };
 
 createApp(App)
-  .use(createVuetify({ theme: { defaultTheme: "light" } }))
+  .use(createVuetify({ theme: { defaultTheme: initialTheme() } }))
   .mount("#app");

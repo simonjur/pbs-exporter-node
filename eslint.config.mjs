@@ -57,6 +57,8 @@ export default tseslint.config(
         fetch: "readonly",
         setInterval: "readonly",
         clearInterval: "readonly",
+        localStorage: "readonly",
+        window: "readonly",
       },
     },
     rules: {
