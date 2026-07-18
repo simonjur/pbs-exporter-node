@@ -10,9 +10,13 @@ import { test, expect, type Page } from "@playwright/test";
 
 const STORAGE_KEY = "pbs-exporter-theme";
 
-/** The app-bar theme toggle, located by its accessible name (aria-label). */
+/**
+ * The app-bar theme toggle. Its accessible name flips with the active theme
+ * ("Switch to dark mode" in light, "Switch to light mode" in dark), so match
+ * either — the pattern is still unique among the app-bar buttons.
+ */
 const toggle = (page: Page) =>
-  page.getByRole("button", { name: "Toggle dark mode" });
+  page.getByRole("button", { name: /switch to (dark|light) mode/i });
 
 /** The Vuetify application root, whose class carries the active theme. */
 const root = (page: Page) => page.locator(".v-application");
@@ -92,13 +96,23 @@ test.describe("status UI dark mode", () => {
     await expect(root(page)).toHaveClass(/v-theme--light/);
   });
 
-  test("the toggle glyph reflects the active theme", async ({ page }) => {
+  test("the toggle glyph, label, and aria-pressed reflect the active theme", async ({
+    page,
+  }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/");
+    const button = toggle(page);
 
-    // Light mode offers a switch to dark (moon); dark offers light (sun).
-    await expect(toggle(page)).toContainText("☾");
-    await toggle(page).click();
-    await expect(toggle(page)).toContainText("☀");
+    // Light mode: offers a switch to dark (moon glyph, not pressed).
+    await expect(button).toContainText("☾");
+    await expect(button).toHaveAccessibleName("Switch to dark mode");
+    await expect(button).toHaveAttribute("aria-pressed", "false");
+
+    await button.click();
+
+    // Dark mode: offers a switch to light (sun glyph, pressed).
+    await expect(button).toContainText("☀");
+    await expect(button).toHaveAccessibleName("Switch to light mode");
+    await expect(button).toHaveAttribute("aria-pressed", "true");
   });
 });
