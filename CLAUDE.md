@@ -49,7 +49,7 @@ collaborators + starts the server). Core modules, each unit-tested:
 - [config.ts](src/config.ts) — `loadConfig`: resolves default→flag→env precedence, validates via the zod schema, returns typed `Config`.
 - [configSchema.ts](src/configSchema.ts) — the zod `configSchema`; `Config = z.infer<typeof configSchema>`.
 - [url.ts](src/url.ts) — `validateUrl` (SSRF guard), shared by the schema, `server.ts`, `exporter.ts`.
-- [snapshotCache.ts](src/snapshotCache.ts) — opt-in per-target cache of `pbs_snapshot_*`, re-emitted on failed scrapes (see `REQ-SCRAPE-6`).
+- [src/cache/](src/cache) — opt-in per-target cache of `pbs_snapshot_*`, re-emitted on failed scrapes (see `REQ-SCRAPE-6`): `SnapshotCache` ([snapshotCache.ts](src/cache/snapshotCache.ts), plus `createSnapshotCache`) over a pluggable driver ([snapshotCacheDriver.ts](src/cache/snapshotCacheDriver.ts)) — `memory` (default) or `fs` (JSON file under `pbs.cache-fs-path`, survives restarts, `REQ-SCRAPE-7`).
 - [status.ts](src/status.ts) — in-memory per-target scrape-status store powering the UI.
 - [log.ts](src/log.ts) — `createLogger(level, format)` winston factory; strips CR/LF centrally (see Security).
 - [buildinfo.ts](src/buildinfo.ts) — build metadata (version/commit/build time).

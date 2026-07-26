@@ -17,3 +17,13 @@ services:
       - PBS_API_TOKEN_NAME=pbs-exporter
       - PBS_INSECURE=true
       - PBS_TIMEOUT=10s
+      # Keep serving the last known pbs_snapshot_* metrics while PBS is off,
+      # persisted to /cache so a container restart does not lose them.
+      # - PBS_SNAPSHOTS_CACHE=true
+      # - PBS_CACHE_DRIVER=fs
+      # - PBS_CACHE_FS_PATH=/cache
+    # volumes:
+    #   - pbs-exporter-cache:/cache
+
+# volumes:
+#   pbs-exporter-cache:

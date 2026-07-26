@@ -14,6 +14,8 @@ function raw(overrides: Record<string, unknown> = {}) {
     timeout: "5s",
     insecure: "false",
     cacheSnapshots: "false",
+    cacheDriver: "memory",
+    cacheFsPath: "/cache",
     metricsPath: "/metrics",
     listenAddress: ":10019",
     loglevel: "info",
@@ -44,6 +46,8 @@ describe("configSchema", () => {
       timeout: 5000,
       insecure: false,
       cacheSnapshots: false,
+      cacheDriver: "memory",
+      cacheFsPath: "/cache",
       metricsPath: "/metrics",
       listenAddress: ":10019",
       loglevel: "info",
@@ -99,6 +103,27 @@ describe("configSchema", () => {
 
   it("rejects an invalid log level", () => {
     expect(() => parse({ loglevel: "trace" })).toThrow(/invalid log level/);
+  });
+
+  it("accepts the memory and fs cache drivers", () => {
+    expect(parse({ cacheDriver: "memory" }).cacheDriver).toBe("memory");
+    expect(parse({ cacheDriver: "fs" }).cacheDriver).toBe("fs");
+  });
+
+  it("rejects an unknown cache driver", () => {
+    expect(() => parse({ cacheDriver: "redis" })).toThrow(
+      /invalid cache driver: redis \(expected one of memory, fs\)/,
+    );
+  });
+
+  it("requires a filesystem path when the fs driver is selected", () => {
+    expect(() => parse({ cacheDriver: "fs", cacheFsPath: "" })).toThrow(
+      /must not be empty when cacheDriver is fs/,
+    );
+    // Irrelevant for the memory driver.
+    expect(parse({ cacheDriver: "memory", cacheFsPath: "" }).cacheFsPath).toBe(
+      "",
+    );
   });
 
   it("accepts an empty endpoint (dynamic target mode)", () => {

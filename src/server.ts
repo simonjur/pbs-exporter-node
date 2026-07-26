@@ -19,11 +19,7 @@ import { validateUrl } from "./url.ts";
 import { buildMetrics } from "./metrics.ts";
 import { Exporter } from "./exporter.ts";
 import { getStatuses, getSummary, recordScrape } from "./status.ts";
-import {
-  applyCachedSnapshotMetrics,
-  captureSnapshotMetrics,
-  hasSnapshotCache,
-} from "./snapshotCache.ts";
+import type { SnapshotCache } from "./cache/snapshotCache.ts";
 import { Version, Commit, BuildTime } from "./buildinfo.ts";
 
 // ---------------------------------------------------------------------------
@@ -84,6 +80,8 @@ export type RequestContext = {
   timeoutMs: number;
   dispatcher?: Dispatcher;
   log: Logger;
+  /** Stale-snapshot cache; only used when `config.cacheSnapshots` is enabled. */
+  snapshotCache: SnapshotCache;
 };
 
 export function parseListenAddress(addr: string): {
@@ -155,9 +153,10 @@ export async function handleRequest(
     // have not changed. A success refreshes the cache; a failure replays it.
     if (config.cacheSnapshots) {
       if (result.up) {
-        await captureSnapshotMetrics(target, metrics);
-      } else if (hasSnapshotCache(target)) {
-        applyCachedSnapshotMetrics(target, metrics, Date.now());
+        await context.snapshotCache.capture(target, metrics);
+      } else if (
+        await context.snapshotCache.apply(target, metrics, Date.now())
+      ) {
         log.info(
           `Target ${target} unreachable; serving cached pbs_snapshot_* metrics`,
         );

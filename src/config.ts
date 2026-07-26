@@ -33,6 +33,8 @@ export type CliOptions = {
   "pbs.timeout": string;
   "pbs.insecure": string;
   "pbs.snapshots.cache": string;
+  "pbs.cacheDriver": string;
+  "pbs.cacheFsPath": string;
   "pbs.metricsPath": string;
   "pbs.listenAddress": string;
   "pbs.loglevel": string;
@@ -66,6 +68,8 @@ export function loadConfig(
     insecure: environment.PBS_INSECURE || options["pbs.insecure"],
     cacheSnapshots:
       environment.PBS_SNAPSHOTS_CACHE || options["pbs.snapshots.cache"],
+    cacheDriver: environment.PBS_CACHE_DRIVER || options["pbs.cacheDriver"],
+    cacheFsPath: environment.PBS_CACHE_FS_PATH || options["pbs.cacheFsPath"],
     metricsPath: environment.PBS_METRICS_PATH || options["pbs.metricsPath"],
     listenAddress:
       environment.PBS_LISTEN_ADDRESS || options["pbs.listenAddress"],
