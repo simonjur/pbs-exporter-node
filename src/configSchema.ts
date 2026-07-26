@@ -95,25 +95,50 @@ const logFormat = z.string().transform((value, context): "text" | "json" => {
   return z.NEVER;
 });
 
+/** Where the snapshot cache is stored: `memory` (default) or `fs`. */
+const cacheDriver = z.string().transform((value, context): "memory" | "fs" => {
+  if (value === "memory" || value === "fs") {
+    return value;
+  }
+  context.addIssue({
+    code: "custom",
+    message: `invalid cache driver: ${value} (expected one of memory, fs)`,
+  });
+  return z.NEVER;
+});
+
 /**
  * The full exporter configuration schema. Input is a record of raw strings
  * (plus the boolean `showVersion`); output is the coerced, fully-typed
  * {@link Config}.
  */
-export const configSchema = z.object({
-  endpoint,
-  username: z.string(),
-  apiToken: z.string(),
-  apiTokenName: z.string(),
-  timeout: durationMs,
-  insecure: booleanFromString,
-  cacheSnapshots: booleanFromString,
-  metricsPath: z.string(),
-  listenAddress: z.string(),
-  loglevel: logLevel,
-  logFormat,
-  showVersion: z.boolean(),
-});
+export const configSchema = z
+  .object({
+    endpoint,
+    username: z.string(),
+    apiToken: z.string(),
+    apiTokenName: z.string(),
+    timeout: durationMs,
+    insecure: booleanFromString,
+    cacheSnapshots: booleanFromString,
+    cacheDriver,
+    cacheFsPath: z.string(),
+    metricsPath: z.string(),
+    listenAddress: z.string(),
+    loglevel: logLevel,
+    logFormat,
+    showVersion: z.boolean(),
+  })
+  .superRefine((config, context) => {
+    // The `fs` driver has nowhere to write without a directory.
+    if (config.cacheDriver === "fs" && config.cacheFsPath === "") {
+      context.addIssue({
+        code: "custom",
+        path: ["cacheFsPath"],
+        message: "must not be empty when cacheDriver is fs",
+      });
+    }
+  });
 
 /** The fully-typed, validated exporter configuration. */
 export type Config = z.infer<typeof configSchema>;

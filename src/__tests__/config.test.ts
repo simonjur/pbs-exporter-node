@@ -14,6 +14,8 @@ function options(overrides: Partial<CliOptions> = {}): CliOptions {
     "pbs.timeout": "5s",
     "pbs.insecure": "false",
     "pbs.snapshots.cache": "false",
+    "pbs.cacheDriver": "memory",
+    "pbs.cacheFsPath": "/cache",
     "pbs.metricsPath": "/metrics",
     "pbs.listenAddress": ":10019",
     "pbs.loglevel": "info",
@@ -40,6 +42,8 @@ describe("loadConfig", () => {
       timeout: 5000,
       insecure: false,
       cacheSnapshots: false,
+      cacheDriver: "memory",
+      cacheFsPath: "/cache",
       metricsPath: "/metrics",
       listenAddress: ":10019",
       loglevel: "info",
@@ -108,6 +112,23 @@ describe("loadConfig", () => {
     expect(c.apiToken).toBe("the-token");
     expect(c.username).toBe("svc@pbs");
     expect(c.apiTokenName).toBe("the-name");
+  });
+
+  it("maps the cache driver and its filesystem path from flags and env", () => {
+    const fromFlags = loadConfig(
+      options({ "pbs.cacheDriver": "fs", "pbs.cacheFsPath": "/var/cache/pbs" }),
+      noEnvironment,
+    );
+    expect(fromFlags.cacheDriver).toBe("fs");
+    expect(fromFlags.cacheFsPath).toBe("/var/cache/pbs");
+
+    // env wins over the flag, as for every other setting
+    const fromEnvironment = loadConfig(options({ "pbs.cacheDriver": "fs" }), {
+      PBS_CACHE_DRIVER: "memory",
+      PBS_CACHE_FS_PATH: "/env/cache",
+    });
+    expect(fromEnvironment.cacheDriver).toBe("memory");
+    expect(fromEnvironment.cacheFsPath).toBe("/env/cache");
   });
 
   it("reports every offending field in one error", () => {

@@ -30,6 +30,11 @@ COPY scripts ./scripts
 # shell). The server requires this directory to exist at runtime.
 RUN npm run build:fe
 
+# Default directory for the `fs` snapshot-cache driver (`--pbs.cache-fs-path`).
+# Created up-front and owned by the runtime user so that a volume mounted here
+# is writable; unused unless PBS_SNAPSHOTS_CACHE=true and PBS_CACHE_DRIVER=fs.
+RUN mkdir -p /cache && chown 65534:65534 /cache
+
 # Run as the unprivileged "nobody" user (matches docker-compose `user: 65534`).
 USER 65534
 

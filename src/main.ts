@@ -26,6 +26,10 @@ import {
   parseListenAddress,
 } from "./server.ts";
 import { seedTarget } from "./status.ts";
+import {
+  createSnapshotCache,
+  type SnapshotCache,
+} from "./cache/snapshotCache.ts";
 import { Version, Commit, BuildTime } from "./buildinfo.ts";
 
 // Persistent registry for Node.js process/runtime metrics (process_*, nodejs_*).
@@ -37,6 +41,7 @@ function startServer(
   timeoutMs: number,
   dispatcher: Agent,
   log: Logger,
+  snapshotCache: SnapshotCache,
 ) {
   log.info(`Listening on: ${config.listenAddress}`);
   log.info(`Metrics path: ${config.metricsPath}`);
@@ -49,6 +54,7 @@ function startServer(
         timeoutMs,
         dispatcher,
         log,
+        snapshotCache,
       });
     },
   );
@@ -111,5 +117,14 @@ export function main(config: Config): void {
     seedTarget(config.endpoint);
   }
 
-  startServer(config, timeoutMs, dispatcher, logger);
+  const snapshotCache = createSnapshotCache(config, logger);
+  if (config.cacheSnapshots) {
+    logger.info(
+      config.cacheDriver === "fs"
+        ? `Snapshot cache enabled (fs driver, path ${config.cacheFsPath})`
+        : "Snapshot cache enabled (memory driver, cleared on restart)",
+    );
+  }
+
+  startServer(config, timeoutMs, dispatcher, logger, snapshotCache);
 }

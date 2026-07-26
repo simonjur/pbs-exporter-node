@@ -6,6 +6,8 @@ import { Registry } from "prom-client";
 // `npm run build:fe`), which may not exist when running tests. Mock the file
 // read so static-asset serving is exercised without depending on the real
 // `public/` directory. (Kept module-wide: only the `/` asset test reads a file.)
+// The `fs` snapshot-cache driver (unused here — these tests use the memory one)
+// imports the write helpers from the same module, so the mock must provide them.
 vi.mock("node:fs/promises", () => ({
   readFile: () =>
     Promise.resolve(
@@ -13,6 +15,9 @@ vi.mock("node:fs/promises", () => ({
         '<!doctype html>\n<html><head><title>PBS Exporter — Status</title></head><body><div id="app"></div></body></html>',
       ),
     ),
+  mkdir: () => Promise.resolve(),
+  writeFile: () => Promise.resolve(),
+  rename: () => Promise.resolve(),
 }));
 import {
   handleRequest,
@@ -22,7 +27,10 @@ import {
 } from "../server.ts";
 import type { Config } from "../config.ts";
 import { getStatuses, resetStatuses } from "../status.ts";
-import { resetSnapshotCache } from "../snapshotCache.ts";
+import {
+  MemorySnapshotCacheDriver,
+  SnapshotCache,
+} from "../cache/snapshotCache.ts";
 import {
   healthyRoutes,
   makeFetchMock,
@@ -70,6 +78,8 @@ function baseConfig(overrides: Partial<Config> = {}): Config {
     timeout: 5000,
     insecure: true,
     cacheSnapshots: false,
+    cacheDriver: "memory",
+    cacheFsPath: "/cache",
     metricsPath: "/metrics",
     listenAddress: ":10019",
     loglevel: "info",
@@ -86,6 +96,8 @@ function context(config: Config): RequestContext {
     timeoutMs: 5000,
     dispatcher: undefined,
     log: testLogger,
+    // A fresh cache per context, so tests cannot leak entries into each other.
+    snapshotCache: new SnapshotCache(new MemorySnapshotCacheDriver()),
   };
 }
 
@@ -93,7 +105,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
   resetStatuses();
-  resetSnapshotCache();
 });
 
 describe("handleRequest — /metrics", () => {

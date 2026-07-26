@@ -38,6 +38,16 @@ program
     "false",
   )
   .option(
+    "--pbs.cache-driver <driver>",
+    "Where cached pbs_snapshot_* metrics are stored (memory|fs)",
+    "memory",
+  )
+  .option(
+    "--pbs.cache-fs-path <path>",
+    "Directory holding the snapshot cache file when cache-driver is fs",
+    "/cache",
+  )
+  .option(
     "--pbs.metrics-path <path>",
     "Path under which to expose metrics",
     "/metrics",

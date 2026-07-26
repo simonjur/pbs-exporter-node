@@ -131,6 +131,8 @@ For example, with `PBS_LOGLEVEL=info` set and `--pbs.loglevel=debug` passed, the
 | `pbs.timeout`        | `PBS_TIMEOUT`        | Timeout for requests to Proxmox Backup Server        | `5s`                                                   |
 | `pbs.insecure`       | `PBS_INSECURE`       | Disable TLS certificate verification                 | `false`                                                |
 | `pbs.snapshots.cache`| `PBS_SNAPSHOTS_CACHE`| Serve cached `pbs_snapshot_*` metrics when a scrape fails (PBS offline) | `false`                              |
+| `pbs.cache-driver`   | `PBS_CACHE_DRIVER`   | Where the snapshot cache is stored (`memory`, `fs`)  | `memory`                                               |
+| `pbs.cache-fs-path`  | `PBS_CACHE_FS_PATH`  | Directory for the cache file when the driver is `fs` | `/cache`                                               |
 | `pbs.metrics-path`   | `PBS_METRICS_PATH`   | Path under which to expose metrics                   | `/metrics`                                             |
 | `pbs.listen-address` | `PBS_LISTEN_ADDRESS` | Address to listen on for web interface and telemetry | `:10019`                                               |
 
@@ -154,8 +156,37 @@ last known `pbs_snapshot_*` values while the target is unreachable:
 - Everything else is unchanged: `pbs_up` is still `0`, the failure is still
   logged, and the host/datastore/subscription metrics are not cached.
 
-The cache is in memory only (lost on restart) and is populated by the first
-successful scrape after startup.
+#### Where the cache lives (`pbs.cache-driver`)
+
+By default (`memory`) the cache is in memory only: it is lost on restart and
+repopulated by the first successful scrape after startup. If the exporter is
+restarted while PBS is powered off, the cached series are gone until PBS comes
+back — which is exactly what the container-restart case looks like.
+
+Set `pbs.cache-driver=fs` (`PBS_CACHE_DRIVER=fs`) to also persist the cache to
+`snapshots-cache.json` inside `pbs.cache-fs-path` (`PBS_CACHE_FS_PATH`, default
+`/cache`). The file is rewritten after every successful scrape and reloaded at
+startup, so restarts no longer lose the cached snapshots. Mount that directory
+as a volume and make sure the container user (`65534` in the example compose
+file) can write to it:
+
+```yaml
+services:
+  pbs-exporter:
+    environment:
+      - PBS_SNAPSHOTS_CACHE=true
+      - PBS_CACHE_DRIVER=fs
+      - PBS_CACHE_FS_PATH=/cache
+    volumes:
+      - pbs-exporter-cache:/cache
+
+volumes:
+  pbs-exporter-cache:
+```
+
+The cache is best-effort: if the directory or file cannot be read or written the
+exporter logs a warning and keeps serving from memory — a broken cache never
+fails a scrape.
 
 ### Running on PBS (systemd)
 
