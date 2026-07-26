@@ -213,7 +213,10 @@ const App = {
     </v-container>
   </v-main>
 
-  <v-footer class="text-caption text-medium-emphasis d-flex flex-wrap justify-center ga-2 py-3">
+  <!-- flex-grow-0: Vuetify's .v-footer is "flex: 1 1 auto", so inside the
+       column-flex app wrap it would otherwise grow to eat the leftover
+       viewport height and centre its text in the middle of that block. -->
+  <v-footer class="text-caption text-medium-emphasis d-flex flex-wrap justify-center ga-2 py-3 flex-grow-0">
     <a href="/metrics">/metrics</a>
     <span>&middot;</span>
     <span>exporter {{ exporter.version }}</span>
